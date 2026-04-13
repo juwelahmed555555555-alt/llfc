@@ -1,5 +1,3 @@
-here
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -60,7 +58,8 @@ window.addEventListener('load', () => {
   --purple:#AA00FF;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--dark);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden;}
+html{color-scheme:dark;background:#080D0A;}
+body{background:var(--dark);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden;color-scheme:dark;}
 
 /* LOADER */
 #loader{position:fixed;inset:0;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .5s;}
@@ -81,7 +80,7 @@ nav button:hover,nav button.active{color:var(--green);background:rgba(0,200,83,.
 .admin-btn.aa{background:linear-gradient(135deg,var(--acc),#d49600)!important;color:#000!important;}
 
 /* SECTIONS */
-.section{display:none;padding:1.5rem;max-width:1200px;margin:0 auto;animation:fi .3s;}
+.section{display:none;padding:1.5rem;max-width:1200px;margin:0 auto;animation:fi .3s;background:transparent;}
 .section.active{display:block;}
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
@@ -206,12 +205,15 @@ nav button:hover,nav button.active{color:var(--green);background:rgba(0,200,83,.
 .prob-away{height:100%;background:var(--red);}
 
 /* TABLE */
-.twrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);}
-table{width:100%;border-collapse:collapse;font-size:.88rem;}
-thead{background:rgba(0,200,83,.07);}
-th{padding:.7rem .9rem;text-align:left;font-family:'Barlow Condensed';font-size:.76rem;letter-spacing:1px;text-transform:uppercase;color:var(--green);font-weight:600;white-space:nowrap;}
-td{padding:.6rem .9rem;border-top:1px solid var(--border);color:var(--text);}
-tr:hover td{background:rgba(0,200,83,.03);}
+.twrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);background:var(--card);}
+table{width:100%;border-collapse:collapse;font-size:.88rem;background:var(--card);color:var(--text);}
+thead{background:#0d1f10;}
+thead tr{background:#0d1f10;}
+th{padding:.7rem .9rem;text-align:left;font-family:'Barlow Condensed';font-size:.76rem;letter-spacing:1px;text-transform:uppercase;color:var(--green);font-weight:600;white-space:nowrap;background:#0d1f10;}
+tbody{background:var(--card);}
+tbody tr{background:var(--card);}
+td{padding:.6rem .9rem;border-top:1px solid var(--border);color:var(--text);background:var(--card);}
+tr:hover td{background:#142016 !important;}
 .pts-val{font-family:'Bebas Neue';font-size:1.3rem;color:var(--green);}
 .pos-num{font-family:'Bebas Neue';font-size:1.3rem;}
 .team-cell{display:flex;align-items:center;gap:.5rem;}
@@ -1018,11 +1020,35 @@ function renderHome(){
 // Positions: GK(1) DEF(4) MID(3) FWD(3)
 // ════════════════════════════════════════════
 function buildBestXI(playerPool){
-  // Sort all players by points
-  var sorted=playerPool.slice().sort(function(a,b){return realCalcPts(getStat(b.id))-realCalcPts(getStat(a.id));});
-  // Assign by position slots: top scorer = FWD, next as MID/DEF/GK heuristic
-  // Simply take top 11 in order, assign role labels by slot
-  var xi=sorted.slice(0,11);
+  // Sort all players by points descending
+  var sorted=playerPool.slice().sort(function(a,b){
+    return realCalcPts(getStat(b.id))-realCalcPts(getStat(a.id));
+  });
+
+  // ── XI Rules: max 2 Youth, max 7 Invited ──────────────────────────────
+  var xi=[];
+  var youthCount=0, invitedCount=0;
+  var maxYouth=2, maxInvited=7;
+
+  // First pass: fill XI respecting limits
+  for(var i=0; i<sorted.length && xi.length<11; i++){
+    var p=sorted[i];
+    var cat=p.cat||'local';
+    if(cat==='youth'   && youthCount  >=maxYouth)   continue;
+    if(cat==='invited' && invitedCount>=maxInvited)  continue;
+    xi.push(p);
+    if(cat==='youth')   youthCount++;
+    if(cat==='invited') invitedCount++;
+  }
+
+  // If still less than 11 (rare), fill with next best ignoring limits
+  if(xi.length<11){
+    var xiIds=xi.map(function(p){return p.id;});
+    for(var j=0; j<sorted.length && xi.length<11; j++){
+      if(xiIds.indexOf(sorted[j].id)===-1) xi.push(sorted[j]);
+    }
+  }
+
   var positions=['GK','LB','CB','CB','RB','CM','CM','CAM','LW','ST','RW'];
   return xi.map(function(p,i){ return Object.assign({},p,{pos:positions[i]||'P'}); });
 }
