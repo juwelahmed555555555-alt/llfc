@@ -330,6 +330,7 @@ tr:hover td{background:#142016 !important;}
   .profile-stat-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -442,7 +443,13 @@ tr:hover td{background:#142016 !important;}
 </div>
 
 <div class="section" id="section-points">
-  <h2 class="stitle">Points Table</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem;">
+    <h2 class="stitle" style="margin-bottom:0;border:none;">Points Table</h2>
+    <button onclick="downloadStandingsJPG()" style="background:linear-gradient(135deg,#00C853,#009624);color:#000;border:none;border-radius:10px;padding:.5rem 1.2rem;font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:800;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:.4rem;box-shadow:0 4px 15px rgba(0,200,83,.3);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-8 2h16v2H4v-2z"/></svg>
+      Download JPG
+    </button>
+  </div>
   <div class="twrap">
     <table><thead><tr>
       <th style="color:var(--green)">#</th>
@@ -462,7 +469,23 @@ tr:hover td{background:#142016 !important;}
 </div>
 
 <div class="section" id="section-ranking">
-  <h2 class="stitle">Player Rankings</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem;">
+    <h2 class="stitle" style="margin-bottom:0;border:none;">Player Rankings</h2>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <button onclick="downloadRankingJPG(1)" style="background:linear-gradient(135deg,#DC1E1E,#8B0000);color:#fff;border:none;border-radius:8px;padding:.45rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
+        Download #1-10
+      </button>
+      <button onclick="downloadRankingJPG(2)" style="background:linear-gradient(135deg,#444,#222);color:#fff;border:none;border-radius:8px;padding:.45rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
+        Download #11-20
+      </button>
+      <button onclick="downloadSigningJPG('best')" style="background:linear-gradient(135deg,#FFD700,#FFA000);color:#000;border:none;border-radius:8px;padding:.45rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
+        Best Signing Top 10
+      </button>
+      <button onclick="downloadSigningJPG('flop')" style="background:linear-gradient(135deg,#555,#222);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.45rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
+        Flop Signing Bottom 10
+      </button>
+    </div>
+  </div>
   <div class="rank-info-box">
     ⚡ <strong>Individual Duel System</strong> — Stats based on each player's own duel result, separate from team score.<br>
     Formula: <strong style="color:var(--green)">Win×10</strong> + <strong style="color:var(--acc)">Draw×5</strong> + <strong style="color:var(--red)">Loss×(−10)</strong> + <strong style="color:#7CB9FF">GF×1</strong> + <strong style="color:#FF8A50">GC×(−1)</strong> + <strong style="color:var(--acc)">MOTM×5</strong> + <strong style="color:var(--green)">CS×2</strong>
@@ -493,7 +516,7 @@ tr:hover td{background:#142016 !important;}
       <div style="font-size:.74rem;color:var(--muted)">Captain Dashboard — Player Info Manager</div>
     </div>
     <button class="lbtn" onclick="captainLogout()" style="border-color:rgba(41,121,255,.3);color:#7CB9FF">Logout</button>
-    <button onclick="downloadRosterPDF()" style="background:linear-gradient(135deg,rgba(41,121,255,.15),rgba(41,121,255,.08));border:1px solid rgba(41,121,255,.35);color:#7CB9FF;padding:.4rem .9rem;border-radius:8px;cursor:pointer;font-family:'Barlow Condensed';font-size:.82rem;font-weight:700">PDF Download</button>
+
   </div>
   <div id="captainContent"></div>
 </div>
@@ -1034,38 +1057,54 @@ function renderHome(){
 // Positions: GK(1) DEF(4) MID(3) FWD(3)
 // ════════════════════════════════════════════
 function buildBestXI(playerPool){
-  // Sort all players by points descending
+  // Sort by history-based points
   var sorted=playerPool.slice().sort(function(a,b){
-    return realCalcPts(getStat(b.id))-realCalcPts(getStat(a.id));
+    return realCalcPts(computeStatsFromHistory(b.id))-realCalcPts(computeStatsFromHistory(a.id));
   });
 
-  // ── XI Rules: max 2 Youth, max 7 Invited ──────────────────────────────
   var xi=[];
-  var youthCount=0, invitedCount=0;
-  var maxYouth=2, maxInvited=7;
+  var youthCount=0, invitedCount=0, localCount=0;
+  var MIN_YOUTH=2, MAX_INVITED=7;
 
-  // First pass: fill XI respecting limits
-  for(var i=0; i<sorted.length && xi.length<11; i++){
-    var p=sorted[i];
+  // Separate by category sorted by points
+  var locals   = sorted.filter(function(p){return (p.cat||'local')==='local';});
+  var youths   = sorted.filter(function(p){return p.cat==='youth';});
+  var inviteds = sorted.filter(function(p){return p.cat==='invited';});
+
+  // Step 1: Fill min 2 youth first (take top 2 youth by pts)
+  youths.slice(0, MIN_YOUTH).forEach(function(p){
+    xi.push(p); youthCount++;
+  });
+
+  // Step 2: Fill remaining 9 slots from best available
+  // respecting max 7 invited rule
+  var remaining = sorted.filter(function(p){
+    return !xi.find(function(x){return x.id===p.id;});
+  });
+
+  for(var i=0; i<remaining.length && xi.length<11; i++){
+    var p=remaining[i];
     var cat=p.cat||'local';
-    if(cat==='youth'   && youthCount  >=maxYouth)   continue;
-    if(cat==='invited' && invitedCount>=maxInvited)  continue;
+    if(cat==='invited' && invitedCount>=MAX_INVITED) continue;
     xi.push(p);
     if(cat==='youth')   youthCount++;
     if(cat==='invited') invitedCount++;
   }
 
-  // If still less than 11 (rare), fill with next best ignoring limits
+  // Fallback: if still <11, fill ignoring limits
   if(xi.length<11){
     var xiIds=xi.map(function(p){return p.id;});
-    for(var j=0; j<sorted.length && xi.length<11; j++){
-      if(xiIds.indexOf(sorted[j].id)===-1) xi.push(sorted[j]);
-    }
+    sorted.forEach(function(p){
+      if(xi.length<11 && xiIds.indexOf(p.id)===-1) xi.push(p);
+    });
   }
 
   var positions=['GK','LB','CB','CB','RB','CM','CM','CAM','LW','ST','RW'];
-  return xi.map(function(p,i){ return Object.assign({},p,{pos:positions[i]||'P'}); });
+  return xi.slice(0,11).map(function(p,i){
+    return Object.assign({},p,{pos:positions[i]||'MF'});
+  });
 }
+
 
 function renderBestXI(players, containerId, title, coachName){
   var el=document.getElementById(containerId); if(!el) return;
@@ -1374,6 +1413,21 @@ function showPlayerProfile(pid){
     '<div style="font-family:\'Bebas Neue\';font-size:1.3rem;letter-spacing:2px;color:var(--green);margin:1rem 0 .5rem;border-top:1px solid var(--border);padding-top:.8rem">Match History ('+history.length+')</div>'+
     histHtml+
     '</div>';
+  // Add download JPG button at top of profile body
+  var profileBody = document.getElementById('playerProfileContent');
+  if(profileBody){
+    var dlBtn = document.createElement('button');
+    dlBtn.textContent = 'Download Player Card';
+    dlBtn.setAttribute('data-pid', pid);
+    dlBtn.style.cssText = 'position:absolute;top:14px;right:46px;background:linear-gradient(135deg,#00E664,#009624);color:#000;border:none;border-radius:8px;padding:.35rem .85rem;font-family:Barlow Condensed,sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;letter-spacing:.5px;z-index:10;';
+    dlBtn.onclick = function(){ downloadPlayerCardJPG(this.getAttribute('data-pid')); };
+    profileBody.style.position = 'relative';
+    // Remove existing download btn if any
+    var existing = profileBody.querySelector('.player-dl-btn');
+    if(existing) existing.remove();
+    dlBtn.className = 'player-dl-btn';
+    profileBody.appendChild(dlBtn);
+  }
   document.getElementById('playerProfileModal').classList.remove('hidden');
 }
 
@@ -3187,7 +3241,7 @@ function renderCapPlayerInfo(){
     +'</tr></thead><tbody>'+playerRows+'</tbody></table></div>'
     +'<div style="margin-top:.8rem;display:flex;gap:.6rem;flex-wrap:wrap;">'
     +'<button onclick="saveAllPlayerInfo()" style="background:var(--green);color:#000;border:none;border-radius:8px;padding:.5rem 1.2rem;font-family:Barlow Condensed,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;">Save All</button>'
-    +'<button onclick="downloadRosterPDF()" style="background:rgba(41,121,255,.12);color:#7CB9FF;border:1px solid rgba(41,121,255,.3);border-radius:8px;padding:.5rem 1.2rem;font-family:Barlow Condensed,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;">PDF Download</button>'
+
     +'</div>';
 }
 
@@ -3216,52 +3270,29 @@ async function saveAllPlayerInfo(){
   alert('Saved '+saved+' players.');
 }
 
-function downloadRosterPDF(){
-  if(!captainTeamId) return;
-  var t=getTeamById(captainTeamId); if(!t) return;
-  var ps=getPlayersByTeam(captainTeamId);
-  var rows=calcStandings(); var tp=rows.find(function(r){return r.id===captainTeamId;})||{};
-
-  var tableRows=ps.map(function(p,i){
-    var s=getStat(p.id);
-    var catLabel=p.cat==='invited'?'INVITED':p.cat==='youth'?'YOUTH':'LOCAL';
-    var catColor=p.cat==='invited'?'#FF7A40':p.cat==='youth'?'#5B9BFF':'#00C853';
-    return '<tr style="'+(i%2===0?'background:#f8fff9':'')+'">'+
-      '<td style="padding:6px 10px;border:1px solid #ddd;font-weight:600">'+(i+1)+'</td>'+
-      '<td style="padding:6px 10px;border:1px solid #ddd;font-weight:700">'+esc(p.name)+'</td>'+
-      '<td style="padding:6px 10px;border:1px solid #ddd"><span style="background:'+catColor+'22;color:'+catColor+';padding:2px 7px;border-radius:4px;font-size:11px;font-weight:800;border:1px solid '+catColor+'44">'+catLabel+'</span></td>'+
-      '<td style="padding:6px 10px;border:1px solid #ddd">'+(p.bid||'-')+'</td>'+
-      '<td style="padding:6px 10px;border:1px solid #ddd">'+(p.uid||'<span style="color:#aaa">—</span>')+'</td>'+
-      '<td style="padding:6px 10px;border:1px solid #ddd">'+(p.deviceName||'<span style="color:#aaa">—</span>')+'</td>'+
-      '<td style="padding:6px 10px;border:1px solid #ddd;text-align:right;font-weight:700;color:#009624">'+realCalcPts(s)+'</td>'+
-      '</tr>';
-  }).join('');
-
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'+
-    '<title>'+esc(t.name)+' — Roster</title>'+
-    '<style>body{font-family:Arial,sans-serif;margin:24px;color:#111}'+
-    'h1{color:#009624;margin-bottom:4px}'+
-    '.info{color:#555;font-size:13px;margin-bottom:18px}'+
-    'table{width:100%;border-collapse:collapse;font-size:13px}'+
-    'th{background:#009624;color:#fff;padding:7px 10px;text-align:left;border:1px solid #009624}'+
-    '.footer{margin-top:20px;font-size:11px;color:#aaa;border-top:1px solid #eee;padding-top:8px}'+
-    '@media print{button{display:none}}</style></head><body>'+
-    '<h1>'+esc(t.name)+'</h1>'+
-    '<div class="info">Manager / President: '+esc(t.president||'—')+'&nbsp;&nbsp;|&nbsp;&nbsp;'+
-    'W: '+(tp.w||0)+'&nbsp; D: '+(tp.d||0)+'&nbsp; L: '+(tp.l||0)+'&nbsp; Pts: '+(tp.pts||0)+'</div>'+
-    '<table><thead><tr>'+
-      '<th>#</th><th>Player Name</th><th>Category</th><th>Bid</th><th>User ID</th><th>Device Name</th><th>Points</th>'+
-    '</tr></thead><tbody>'+tableRows+'</tbody></table>'+
-    '<div class="footer">Juvenile League Official Portal &nbsp;|&nbsp; Generated: '+new Date().toLocaleString()+'</div>'+
-    '<div style="margin-top:12px;text-align:right"><button onclick="window.print()" style="background:#009624;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px">Print / Save PDF</button></div>'+
-    '</body></html>';
-
-  var win=window.open('','_blank');
-  win.document.write(html);
-  win.document.close();
-  setTimeout(function(){win.print();},400);
+async function savePlayerInfo(pid){
+  var uid_inp=document.getElementById('uid_'+pid);
+  var dev_inp=document.getElementById('dev_'+pid);
+  if(!uid_inp||!dev_inp) return;
+  var p=getPlayers().find(function(pl){return pl.id===pid;}); if(!p) return;
+  await fsSet('players',pid,Object.assign({},p,{uid:uid_inp.value.trim(),deviceName:dev_inp.value.trim()}));
+  // flash green
+  var row=document.getElementById('prow_'+pid);
+  if(row){ row.style.background='rgba(0,200,83,.08)'; setTimeout(function(){row.style.background='';},1000); }
 }
 
+async function saveAllPlayerInfo(){
+  var ps=getPlayersByTeam(captainTeamId);
+  var saved=0;
+  for(var p of ps){
+    var uid_inp=document.getElementById('uid_'+p.id);
+    var dev_inp=document.getElementById('dev_'+p.id);
+    if(!uid_inp||!dev_inp) continue;
+    await fsSet('players',p.id,Object.assign({},p,{uid:uid_inp.value.trim(),deviceName:dev_inp.value.trim()}));
+    saved++;
+  }
+  alert('Saved '+saved+' players.');
+}
 
 // ════════════════════════════════════════════
 // ADMIN — FIXTURE GENERATOR
@@ -3448,8 +3479,6 @@ function generateFixture(){
   }
 
   // Generate PDF URL for info cards
-  var pdfUrl=generateInfoCardPDFUrl(fx.home, fx.away, ht.name, at.name);
-
   var output=[
     '\uD83D\uDD25 '+B('Thriller Loading'),
     '',
@@ -3480,10 +3509,7 @@ function generateFixture(){
     '',
     B('Referee')+': '+home.ref+' / '+away.ref,
     '',
-    '\uD83D\uDCCC \u09B0\u09C1\u09B2\u09B8: https://cobegbd.com/rules/',
-    '',
-    '\uD83D\uDCCB Player Info Cards (PDF):',
-    pdfUrl
+    '\uD83D\uDCCC \u09B0\u09C1\u09B2\u09B8: https://cobegbd.com/rules/'
   ]);
 
   var text=output.join('\n');
@@ -3492,85 +3518,183 @@ function generateFixture(){
   document.getElementById('fxgen_output').style.display='block';
   document.getElementById('fxgen_text').textContent=text;
 
-  // Show PDF button
-  var pdfBtnWrap=document.getElementById('fxgen_pdf_btn');
-  if(!pdfBtnWrap){
-    pdfBtnWrap=document.createElement('div');
-    pdfBtnWrap.id='fxgen_pdf_btn';
-    pdfBtnWrap.style.cssText='margin-top:.6rem;';
-    document.getElementById('fxgen_output').appendChild(pdfBtnWrap);
+  // Show JPG download buttons
+  var jpgBtnWrap=document.getElementById('fxgen_jpg_btns');
+  if(!jpgBtnWrap){
+    jpgBtnWrap=document.createElement('div');
+    jpgBtnWrap.id='fxgen_jpg_btns';
+    jpgBtnWrap.style.cssText='margin-top:.7rem;display:flex;gap:.6rem;flex-wrap:wrap;';
+    document.getElementById('fxgen_output').appendChild(jpgBtnWrap);
   }
-  pdfBtnWrap.innerHTML='<button onclick="openInfoCardPDF(window._lastFxData.homeId,window._lastFxData.awayId,window._lastFxData.homeName,window._lastFxData.awayName)" style="background:rgba(41,121,255,.12);color:#7CB9FF;border:1px solid rgba(41,121,255,.3);border-radius:8px;padding:.45rem 1.1rem;font-family:Barlow Condensed,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;">Open Player Info Cards (PDF)</button>';
+  jpgBtnWrap.innerHTML=
+    '<button onclick="downloadFixtureJPG()" style="background:linear-gradient(135deg,rgba(0,200,83,.15),rgba(0,200,83,.08));color:var(--green);border:1px solid rgba(0,200,83,.35);border-radius:8px;padding:.5rem 1.2rem;font-family:Barlow Condensed,sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:.5px;">Download Fixture Card</button>'
+    +'<button onclick="downloadTeamInfoCardJPG(window._lastFxData.homeId,window._lastFxData.homeName,null)" style="background:linear-gradient(135deg,rgba(0,200,83,.12),rgba(0,200,83,.06));color:var(--green);border:1px solid rgba(0,200,83,.3);border-radius:8px;padding:.5rem 1.2rem;font-family:Barlow Condensed,sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:.5px;">Download Home Team Info</button>'
+    +'<button onclick="downloadTeamInfoCardJPG(window._lastFxData.awayId,window._lastFxData.awayName,null)" style="background:linear-gradient(135deg,rgba(41,121,255,.15),rgba(41,121,255,.08));color:#7CB9FF;border:1px solid rgba(41,121,255,.35);border-radius:8px;padding:.5rem 1.2rem;font-family:Barlow Condensed,sans-serif;font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:.5px;">Download Away Team Info</button>';
 
   document.getElementById('fxgen_text').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function generateInfoCardPDFUrl(homeId, awayId, homeName, awayName){
-  // Build data URL for PDF - open in new window
-  return '[PDF Info Cards will open after generation]';
-}
+// ════════════════════════════════════════════════════════════
+// JPG DOWNLOAD — Fixture Card
+// ════════════════════════════════════════════════════════════
+function downloadFixtureJPG(){
+  var text = window._lastFixtureText || '';
+  if(!text){ alert('Generate a fixture first!'); return; }
+  var fx  = window._lastFxData || {};
 
-function openInfoCardPDF(homeId, awayId, homeName, awayName){
-  var ht=getTeamById(homeId), at=getTeamById(awayId);
-  var hPlayers=getPlayersByTeam(homeId);
-  var aPlayers=getPlayersByTeam(awayId);
+  // Build a styled card div in memory
+  var card = document.createElement('div');
+  card.style.cssText = [
+    'position:fixed','top:-9999px','left:-9999px',
+    'width:520px','min-height:300px',
+    'background:linear-gradient(160deg,#080D0A 0%,#0d2010 100%)',
+    'border:2px solid #00C853',
+    'border-radius:18px',
+    'padding:28px 30px',
+    'font-family:Arial,sans-serif',
+    'color:#E8F5E9',
+    'box-shadow:0 0 40px rgba(0,200,83,.25)',
+    'white-space:pre-wrap',
+    'word-break:break-word',
+    'line-height:1.75',
+    'font-size:14px',
+    'letter-spacing:.2px'
+  ].join(';');
 
-  function teamPage(teamObj, players, teamName){
-    var logoHtml='';
-    if(teamObj){
-      var src=teamObj.logoUrl||teamObj.logo;
-      if(src&&src.startsWith('http')) logoHtml='<img src="'+src+'" style="width:60px;height:60px;border-radius:50%;border:3px solid #009624;object-fit:cover;">';
-    }
-    var rows=players.map(function(p,i){
-      var catLabel=p.cat==='invited'?'INVITED':p.cat==='youth'?'YOUTH':'LOCAL';
-      var catColor=p.cat==='invited'?'#FF6B35':p.cat==='youth'?'#2979FF':'#009624';
-      return '<tr style="'+(i%2===0?'background:#f5fff7;':'')+'border-bottom:1px solid #e8f5e9;">'
-        +'<td style="padding:7px 10px;font-weight:700;font-size:13px;">'+(i+1)+'</td>'
-        +'<td style="padding:7px 10px;font-weight:700;font-size:13px;">'+esc(p.name)+'</td>'
-        +'<td style="padding:7px 10px;"><span style="background:'+catColor+'22;color:'+catColor+';padding:2px 7px;border-radius:4px;font-size:11px;font-weight:800;border:1px solid '+catColor+'55;">'+catLabel+'</span></td>'
-        +'<td style="padding:7px 10px;font-size:12px;color:#555;">'+(p.bid||'—')+'</td>'
-        +'<td style="padding:7px 10px;font-size:12px;color:#333;">'+(p.uid||'<span style="color:#bbb;">—</span>')+'</td>'
-        +'<td style="padding:7px 10px;font-size:12px;color:#333;">'+(p.deviceName||'<span style="color:#bbb;">—</span>')+'</td>'
-        +'</tr>';
-    }).join('');
+  // Header
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(0,200,83,.3);';
+  header.innerHTML = '<div style="width:36px;height:36px;background:linear-gradient(135deg,#00C853,#009624);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">&#9917;</div>'
+    + '<div><div style="font-size:17px;font-weight:900;color:#00C853;letter-spacing:2px;">JPL 2026</div>'
+    + '<div style="font-size:11px;color:#5A8465;letter-spacing:1px;">FIXTURE CARD</div></div>';
 
-    return '<div style="page-break-after:always;padding:28px;font-family:Arial,sans-serif;">'
-      +'<div style="display:flex;align-items:center;gap:16px;border-bottom:3px solid #009624;padding-bottom:16px;margin-bottom:20px;">'
-        +logoHtml
-        +'<div>'
-          +'<h1 style="margin:0;color:#009624;font-size:24px;letter-spacing:1px;">'+esc(teamName)+'</h1>'
-          +'<div style="color:#666;font-size:13px;margin-top:2px;">Player Information Card · Juvenile League 2026</div>'
-        +'</div>'
-      +'</div>'
-      +'<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-        +'<thead><tr style="background:#009624;">'
-          +'<th style="padding:8px 10px;color:#fff;text-align:left;">#</th>'
-          +'<th style="padding:8px 10px;color:#fff;text-align:left;">Player Name</th>'
-          +'<th style="padding:8px 10px;color:#fff;text-align:left;">Category</th>'
-          +'<th style="padding:8px 10px;color:#fff;text-align:left;">Bid</th>'
-          +'<th style="padding:8px 10px;color:#fff;text-align:left;">User ID</th>'
-          +'<th style="padding:8px 10px;color:#fff;text-align:left;">Device Name</th>'
-        +'</tr></thead>'
-        +'<tbody>'+rows+'</tbody>'
-      +'</table>'
-      +'<div style="margin-top:16px;font-size:11px;color:#aaa;border-top:1px solid #e0e0e0;padding-top:8px;">'
-        +'Juvenile League · Generated: '+new Date().toLocaleString()
-      +'</div>'
-      +'</div>';
+  // Text body
+  var body = document.createElement('pre');
+  body.style.cssText = 'margin:0;white-space:pre-wrap;word-break:break-word;font-family:Arial,sans-serif;font-size:13px;color:#E8F5E9;line-height:1.75;';
+  body.textContent = text;
+
+  card.appendChild(header);
+  card.appendChild(body);
+  document.body.appendChild(card);
+
+  if(typeof html2canvas === 'undefined'){
+    document.body.removeChild(card);
+    alert('html2canvas not loaded yet. Please wait and try again.');
+    return;
   }
 
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'
-    +'<title>Player Info Cards</title>'
-    +'<style>@media print{.no-print{display:none;}}</style>'
-    +'</head><body style="margin:0;padding:0;background:#fff;">'
-    +'<div class="no-print" style="position:fixed;top:0;right:0;background:#009624;color:#fff;padding:10px 20px;cursor:pointer;z-index:999;font-family:Arial;font-size:14px;font-weight:700;border-radius:0 0 0 10px;" onclick="window.print()">Print / Save PDF</div>'
-    +teamPage(ht, hPlayers, homeName)
-    +teamPage(at, aPlayers, awayName)
-    +'</body></html>';
+  html2canvas(card, {
+    backgroundColor: '#080D0A',
+    scale: 2,
+    useCORS: true,
+    logging: false
+  }).then(function(canvas){
+    document.body.removeChild(card);
+    var link = document.createElement('a');
+    link.download = 'JPL_Fixture_' + (fx.homeName||'Home').replace(/\s/g,'_') + '_vs_' + (fx.awayName||'Away').replace(/\s/g,'_') + '.jpg';
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+  }).catch(function(err){
+    document.body.removeChild(card);
+    console.error('JPG error:', err);
+    alert('JPG generation failed: ' + err.message);
+  });
+}
 
-  var win=window.open('','_blank');
-  if(win){ win.document.write(html); win.document.close(); }
-  return html;
+// ════════════════════════════════════════════════════════════
+// JPG DOWNLOAD — Player Info Cards (2 teams, one JPG each)
+// ════════════════════════════════════════════════════════════
+function downloadInfoCardJPG(homeId, awayId, homeName, awayName){
+  if(typeof html2canvas === 'undefined'){
+    alert('html2canvas not loaded yet. Please wait and try again.'); return;
+  }
+  // Download home team card first, then away
+  downloadTeamInfoCardJPG(homeId, homeName, function(){
+    setTimeout(function(){ downloadTeamInfoCardJPG(awayId, awayName, null); }, 800);
+  });
+}
+
+function downloadTeamInfoCardJPG(teamId, teamName, callback){
+  var t = getTeamById(teamId);
+  var players = getPlayersByTeam(teamId);
+
+  var card = document.createElement('div');
+  card.style.cssText = [
+    'position:fixed','top:-9999px','left:-9999px',
+    'width:600px',
+    'background:linear-gradient(160deg,#080D0A 0%,#0d2010 100%)',
+    'border:2px solid #00C853',
+    'border-radius:18px',
+    'padding:24px 26px 20px',
+    'font-family:Arial,sans-serif',
+    'color:#E8F5E9'
+  ].join(';');
+
+  // Header
+  var logoSrc = t ? (t.logoUrl||t.logo||'') : '';
+  var logoImg = (logoSrc && logoSrc.startsWith('http'))
+    ? '<img src="'+logoSrc+'" style="width:48px;height:48px;border-radius:50%;border:2px solid #00C853;object-fit:cover;" crossorigin="anonymous">'
+    : '<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#00C853,#009624);display:flex;align-items:center;justify-content:center;font-size:22px;">&#9917;</div>';
+
+  var header = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid rgba(0,200,83,.3);">'
+    + logoImg
+    + '<div>'
+      + '<div style="font-size:20px;font-weight:900;color:#00C853;letter-spacing:1px;">'+esc(teamName)+'</div>'
+      + '<div style="font-size:11px;color:#5A8465;letter-spacing:1px;margin-top:2px;">PLAYER INFO CARD · JPL 2026</div>'
+    + '</div>'
+    + '</div>';
+
+  // Table
+  var catColors = {local:'#00C853', youth:'#2979FF', invited:'#FF6B35'};
+  var rows = players.map(function(p, i){
+    var cat = p.cat||'local';
+    var cc = catColors[cat]||'#00C853';
+    var catLabel = cat.toUpperCase();
+    var bg = i%2===0 ? 'rgba(0,200,83,.04)' : 'transparent';
+    return '<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,.07);">'
+      + '<td style="padding:7px 8px;font-weight:700;color:#5A8465;font-size:12px;">'+(i+1)+'</td>'
+      + '<td style="padding:7px 8px;font-weight:700;font-size:13px;color:#E8F5E9;">'+esc(p.name)+'</td>'
+      + '<td style="padding:7px 8px;"><span style="background:'+cc+'22;color:'+cc+';padding:2px 7px;border-radius:4px;font-size:10px;font-weight:900;border:1px solid '+cc+'55;">'+catLabel+'</span></td>'
+      + '<td style="padding:7px 8px;font-size:12px;color:#FFD600;font-weight:700;">'+(p.bid||'—')+'</td>'
+      + '<td style="padding:7px 8px;font-size:11px;color:#90CAF9;max-width:120px;word-break:break-all;">'+(p.uid||'<span style="color:#3a5a3a;">—</span>')+'</td>'
+      + '<td style="padding:7px 8px;font-size:11px;color:#A5D6A7;max-width:110px;word-break:break-all;">'+(p.deviceName||'<span style="color:#3a5a3a;">—</span>')+'</td>'
+      + '</tr>';
+  }).join('');
+
+  var table = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    + '<thead><tr style="background:rgba(0,200,83,.12);border-bottom:1px solid rgba(0,200,83,.3);">'
+    + '<th style="padding:7px 8px;text-align:left;color:#00C853;font-size:10px;text-transform:uppercase;letter-spacing:.8px;">#</th>'
+    + '<th style="padding:7px 8px;text-align:left;color:#00C853;font-size:10px;text-transform:uppercase;letter-spacing:.8px;">Player</th>'
+    + '<th style="padding:7px 8px;text-align:left;color:#00C853;font-size:10px;text-transform:uppercase;letter-spacing:.8px;">Cat</th>'
+    + '<th style="padding:7px 8px;text-align:left;color:#00C853;font-size:10px;text-transform:uppercase;letter-spacing:.8px;">Bid</th>'
+    + '<th style="padding:7px 8px;text-align:left;color:#00C853;font-size:10px;text-transform:uppercase;letter-spacing:.8px;">User ID</th>'
+    + '<th style="padding:7px 8px;text-align:left;color:#00C853;font-size:10px;text-transform:uppercase;letter-spacing:.8px;">Device</th>'
+    + '</tr></thead>'
+    + '<tbody>'+rows+'</tbody>'
+    + '</table>';
+
+  var footer = '<div style="margin-top:12px;font-size:10px;color:#3a5a3a;text-align:right;">Juvenile League 2026 · '+new Date().toLocaleDateString()+'</div>';
+
+  card.innerHTML = header + table + footer;
+  document.body.appendChild(card);
+
+  html2canvas(card, {
+    backgroundColor: '#080D0A',
+    scale: 2,
+    useCORS: true,
+    logging: false
+  }).then(function(canvas){
+    document.body.removeChild(card);
+    var link = document.createElement('a');
+    link.download = 'JPL_InfoCard_' + teamName.replace(/\s/g,'_') + '.jpg';
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+    if(callback) callback();
+  }).catch(function(err){
+    document.body.removeChild(card);
+    console.error('JPG error:', err);
+    if(callback) callback();
+  });
 }
 
 function copyFixtureText(){
@@ -3591,6 +3715,762 @@ function copyFixtureText(){
     document.body.appendChild(ta); ta.select(); document.execCommand('copy');
     document.body.removeChild(ta); showCopied();
   }
+}
+
+// ════════════════════════════════════════════
+// STANDINGS CARD — Download JPG (Canva Pro style)
+// ════════════════════════════════════════════
+function downloadStandingsJPG(){
+  if(typeof html2canvas === 'undefined'){
+    alert('html2canvas not loaded yet. Please wait and try again.');
+    return;
+  }
+  var rows = calcStandings().filter(function(r){
+    var ms = state.manual_standings && state.manual_standings[r.id];
+    return !(ms && ms.hidden);
+  });
+  if(!rows.length){ alert('No standings data yet.'); return; }
+
+  // ── Build the card DOM element ──────────────────────────────────────
+  var card = document.createElement('div');
+  card.style.cssText = [
+    'position:fixed','top:-9999px','left:-9999px',
+    'width:700px',
+    'background:linear-gradient(145deg,#050c07 0%,#0a1a0c 40%,#060e08 100%)',
+    'border-radius:20px',
+    'padding:0',
+    'font-family:Arial,Helvetica,sans-serif',
+    'overflow:hidden',
+    'box-shadow:0 0 0 1px rgba(0,200,83,.2)'
+  ].join(';');
+
+  // ── Header ───────────────────────────────────────────────────────────
+  var headerDiv = document.createElement('div');
+  headerDiv.style.cssText = [
+    'background:linear-gradient(135deg,rgba(0,200,83,.15) 0%,rgba(0,200,83,.04) 60%,transparent 100%)',
+    'border-bottom:1px solid rgba(0,200,83,.25)',
+    'padding:26px 30px 22px',
+    'display:flex','align-items:center','justify-content:space-between'
+  ].join(';');
+
+  headerDiv.innerHTML =
+    '<div style="display:flex;align-items:center;gap:14px;">'
+      + '<div style="width:52px;height:52px;background:linear-gradient(135deg,#00C853,#009624);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 20px rgba(0,200,83,.4);">&#9917;</div>'
+      + '<div>'
+        + '<div style="font-size:22px;font-weight:900;color:#FFFFFF;letter-spacing:1.5px;line-height:1.1;">JUVENILE PREMIER LEAGUE</div>'
+        + '<div style="font-size:12px;color:#00C853;letter-spacing:3px;text-transform:uppercase;margin-top:3px;font-weight:700;">Season 1 &nbsp;&#9646;&nbsp; Official Standings</div>'
+      + '</div>'
+    + '</div>'
+    + '<div style="text-align:right;">'
+      + '<div style="font-size:11px;color:rgba(255,255,255,.35);letter-spacing:1px;">' + new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase() + '</div>'
+      + '<div style="font-size:10px;color:rgba(0,200,83,.5);letter-spacing:1px;margin-top:3px;">JPL OFFICIAL</div>'
+    + '</div>';
+
+  card.appendChild(headerDiv);
+
+  // ── Column header ─────────────────────────────────────────────────
+  var colHeader = document.createElement('div');
+  colHeader.style.cssText = 'padding:10px 30px;display:grid;grid-template-columns:30px 36px 1fr 40px 40px 40px 40px 50px 55px 80px;gap:0;align-items:center;background:rgba(0,200,83,.06);border-bottom:1px solid rgba(0,200,83,.12);';
+
+  var colLabels = [
+    {text:'#',      align:'center', color:'rgba(0,200,83,.6)'},
+    {text:'',       align:'center', color:'transparent'},
+    {text:'TEAM',   align:'left',   color:'rgba(0,200,83,.6)'},
+    {text:'MP',     align:'center', color:'rgba(255,255,255,.4)'},
+    {text:'W',      align:'center', color:'rgba(0,200,83,.6)'},
+    {text:'D',      align:'center', color:'rgba(255,214,0,.6)'},
+    {text:'L',      align:'center', color:'rgba(255,61,61,.6)'},
+    {text:'GD',     align:'center', color:'rgba(255,255,255,.4)'},
+    {text:'FORM',   align:'center', color:'rgba(255,255,255,.4)'},
+    {text:'PTS',    align:'center', color:'rgba(0,200,83,.8)'},
+  ];
+  colHeader.innerHTML = colLabels.map(function(c){
+    return '<div style="font-size:9px;font-weight:800;color:'+c.color+';text-align:'+c.align+';letter-spacing:1.2px;">'+c.text+'</div>';
+  }).join('');
+  card.appendChild(colHeader);
+
+  // ── Rows ──────────────────────────────────────────────────────────
+  var tableDiv = document.createElement('div');
+  tableDiv.style.cssText = 'padding:4px 0 8px;';
+
+  rows.forEach(function(r, i){
+    var t = getTeamById(r.id);
+    var pos = i+1;
+
+    // Position color
+    var posColor = pos===1 ? '#FFD700' : pos<=3 ? '#00C853' : pos<=6 ? '#2979FF' : 'rgba(255,255,255,.4)';
+    var posGlow  = pos===1 ? '0 0 8px rgba(255,215,0,.4)' : pos<=3 ? '0 0 6px rgba(0,200,83,.3)' : 'none';
+
+    // Row background
+    var rowBg = pos===1
+      ? 'linear-gradient(90deg,rgba(255,215,0,.06) 0%,transparent 70%)'
+      : i%2===0 ? 'rgba(255,255,255,.015)' : 'transparent';
+
+    // Logo
+    var logoHtml;
+    var logoSrc = t ? (t.logoUrl||t.logo||'') : '';
+    if(logoSrc && logoSrc.startsWith('http')){
+      logoHtml = '<img src="'+logoSrc+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid rgba(0,200,83,.3);" crossorigin="anonymous">';
+    } else {
+      var emoji = logoSrc||'&#9917;';
+      logoHtml = '<div style="width:28px;height:28px;border-radius:50%;background:rgba(0,200,83,.12);border:1px solid rgba(0,200,83,.25);display:flex;align-items:center;justify-content:center;font-size:14px;">'+emoji+'</div>';
+    }
+
+    // Form dots
+    var formDots = (r.form||[]).slice(-3).map(function(f){
+      var fc = f==='fw'?'#00C853':f==='ld'?'#FF3D3D':'#FFD600';
+      var fl = f==='fw'?'W':f==='ld'?'L':'D';
+      return '<div style="width:16px;height:16px;border-radius:50%;background:'+fc+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+        + '<span style="font-size:8px;font-weight:900;color:#000;">'+fl+'</span></div>';
+    }).join('');
+
+    // GD color
+    var gd = (r.gf||0)-(r.ga||0);
+    var gdColor = gd>0 ? '#00C853' : gd<0 ? '#FF3D3D' : 'rgba(255,255,255,.5)';
+    var gdText = (gd>0?'+':'')+gd;
+
+    // Team name color/weight for top 3
+    var teamColor = pos<=3 ? '#FFFFFF' : 'rgba(255,255,255,.8)';
+
+    var row = document.createElement('div');
+    row.style.cssText = 'padding:9px 30px;display:grid;grid-template-columns:30px 36px 1fr 40px 40px 40px 40px 50px 55px 80px;gap:0;align-items:center;background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,.04);transition:all .2s;';
+
+    row.innerHTML =
+      // Pos
+      '<div style="font-family:Arial,sans-serif;font-size:15px;font-weight:900;color:'+posColor+';text-align:center;text-shadow:'+posGlow+';">'+pos+'</div>'
+      // Logo
+      + '<div style="display:flex;align-items:center;justify-content:center;">'+logoHtml+'</div>'
+      // Team name
+      + '<div style="font-size:13px;font-weight:700;color:'+teamColor+';letter-spacing:.3px;padding-left:4px;">'+esc(r.name)+'</div>'
+      // MP
+      + '<div style="font-size:13px;color:rgba(255,255,255,.5);text-align:center;font-weight:600;">'+r.p+'</div>'
+      // W
+      + '<div style="font-size:13px;color:#00C853;text-align:center;font-weight:700;">'+r.w+'</div>'
+      // D
+      + '<div style="font-size:13px;color:#FFD600;text-align:center;font-weight:700;">'+r.d+'</div>'
+      // L
+      + '<div style="font-size:13px;color:#FF3D3D;text-align:center;font-weight:700;">'+r.l+'</div>'
+      // GD
+      + '<div style="font-size:13px;color:'+gdColor+';text-align:center;font-weight:700;">'+gdText+'</div>'
+      // Form
+      + '<div style="display:flex;gap:3px;align-items:center;justify-content:center;">'+formDots+'</div>'
+      // PTS
+      + '<div style="text-align:center;">'
+        + '<span style="font-family:Arial,sans-serif;font-size:'+(pos===1?'22':'18')+'px;font-weight:900;color:'+(pos===1?'#FFD700':'#00C853')+';text-shadow:'+(pos===1?'0 0 12px rgba(255,215,0,.5)':'none')+';">'+r.pts+'</span>'
+      + '</div>';
+
+    tableDiv.appendChild(row);
+  });
+
+  card.appendChild(tableDiv);
+
+  // ── Footer ────────────────────────────────────────────────────────
+  var footerDiv = document.createElement('div');
+  footerDiv.style.cssText = 'padding:14px 30px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,200,83,.12);background:rgba(0,200,83,.03);';
+  footerDiv.innerHTML =
+    '<div style="display:flex;align-items:center;gap:8px;">'
+      + '<div style="width:3px;height:16px;background:linear-gradient(180deg,#00C853,#009624);border-radius:2px;"></div>'
+      + '<div style="font-size:10px;color:rgba(0,200,83,.5);letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">W = Win &nbsp; D = Draw &nbsp; L = Loss &nbsp; GD = Goal Diff</div>'
+    + '</div>'
+    + '<div style="font-size:10px;color:rgba(255,255,255,.2);letter-spacing:.5px;">JPL © 2026</div>';
+  card.appendChild(footerDiv);
+
+  document.body.appendChild(card);
+
+  // Wait for images to load, then render
+  var imgs = card.querySelectorAll('img');
+  var imgCount = imgs.length;
+  if(imgCount === 0){
+    renderStandingsCanvas(card);
+  } else {
+    var loaded = 0;
+    imgs.forEach(function(img){
+      if(img.complete){
+        loaded++;
+        if(loaded === imgCount) renderStandingsCanvas(card);
+      } else {
+        img.onload = img.onerror = function(){
+          loaded++;
+          if(loaded === imgCount) renderStandingsCanvas(card);
+        };
+      }
+    });
+  }
+}
+
+function renderStandingsCanvas(card){
+  html2canvas(card, {
+    backgroundColor: '#050c07',
+    scale: 2.5,
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+    onclone: function(doc, el){
+      el.style.top  = '0';
+      el.style.left = '0';
+      el.style.position = 'relative';
+    }
+  }).then(function(canvas){
+    document.body.removeChild(card);
+    var link = document.createElement('a');
+    link.download = 'JPL_Season1_Standings.jpg';
+    link.href = canvas.toDataURL('image/jpeg', 0.97);
+    link.click();
+  }).catch(function(err){
+    if(document.body.contains(card)) document.body.removeChild(card);
+    console.error('Standings JPG error:', err);
+    alert('JPG generation failed. Try again.');
+  });
+}
+
+// ════════════════════════════════════════════
+// PLAYER RANKING JPG — 10 players per card
+// No emoji, use SVG icons
+// ════════════════════════════════════════════
+function downloadRankingJPG(page){
+  if(typeof html2canvas==='undefined'){alert('html2canvas not loaded.');return;}
+
+  var ps=getPlayers().slice().sort(function(a,b){
+    return realCalcPts(computeStatsFromHistory(b.id))-realCalcPts(computeStatsFromHistory(a.id));
+  });
+  var startIdx=(page-1)*10;
+  var slice=ps.slice(startIdx,startIdx+10);
+  if(!slice.length){alert('No players in this range.');return;}
+  var rangeLabel='#'+(startIdx+1)+' - #'+(startIdx+slice.length);
+
+  /* ── CARD WRAPPER ── */
+  var wrap=document.createElement('div');
+  wrap.style.cssText=[
+    'position:fixed','top:-9999px','left:-9999px',
+    'width:660px',
+    'background:#0d0d0d',
+    'border-radius:20px',
+    'overflow:hidden',
+    'font-family:Arial,Helvetica,sans-serif',
+    'border:1px solid rgba(220,30,30,.35)',
+    'box-shadow:0 0 0 1px rgba(220,30,30,.15),0 0 40px rgba(180,0,0,.2)'
+  ].join(';');
+
+  /* glow top-right */
+  var g1=document.createElement('div');
+  g1.style.cssText='position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(200,0,0,.18) 0%,transparent 70%);pointer-events:none;z-index:1;';
+  wrap.appendChild(g1);
+  /* glow bottom-left */
+  var g2=document.createElement('div');
+  g2.style.cssText='position:absolute;bottom:-60px;left:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(200,0,0,.1) 0%,transparent 70%);pointer-events:none;z-index:1;';
+  wrap.appendChild(g2);
+
+  var inner=document.createElement('div');
+  inner.style.cssText='position:relative;z-index:2;';
+
+  /* ── HEADER ── */
+  var hdr=document.createElement('div');
+  hdr.style.cssText=[
+    'padding:22px 26px 18px',
+    'display:flex','align-items:center','justify-content:space-between',
+    'background:linear-gradient(90deg,rgba(180,0,0,.25) 0%,rgba(180,0,0,.06) 60%,transparent 100%)',
+    'border-bottom:1px solid rgba(220,30,30,.2)'
+  ].join(';');
+  hdr.innerHTML=
+    '<div style="display:flex;align-items:center;gap:14px;">'
+      +'<div style="width:46px;height:46px;background:linear-gradient(135deg,#DC1E1E,#8B0000);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(220,30,30,.6),0 4px 12px rgba(0,0,0,.5);">'
+        +'<svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M5 3h14a1 1 0 0 1 1 1v1H4V4a1 1 0 0 1 1-1zm-1 4h16v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7zm3 2v2h2V9H7zm0 4v2h2v-2H7zm4-4v2h2V9h-2zm0 4v2h2v-2h-2zm4-4v2h2V9h-2zm0 4v2h2v-2h-2z"/></svg>'
+      +'</div>'
+      +'<div>'
+        +'<div style="font-size:19px;font-weight:900;color:#FFFFFF;letter-spacing:2px;line-height:1;text-shadow:0 0 20px rgba(220,30,30,.4);">JPL PLAYER RANKINGS</div>'
+        +'<div style="font-size:10px;color:#FF4444;letter-spacing:3px;text-transform:uppercase;margin-top:5px;font-weight:700;opacity:.85;">SEASON 1 &nbsp;&#9645;&nbsp; '+rangeLabel+'</div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="text-align:right;font-size:10px;color:rgba(255,255,255,.2);letter-spacing:1px;font-weight:600;">'+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase()+'</div>';
+  inner.appendChild(hdr);
+
+  /* ── COL HEADERS ── */
+  var colH=document.createElement('div');
+  colH.style.cssText='padding:8px 26px;display:grid;grid-template-columns:28px 32px 1fr 30px 30px 30px 38px 38px 48px 60px;gap:2px;align-items:center;background:rgba(220,30,30,.07);border-bottom:1px solid rgba(220,30,30,.12);';
+  var cDefs=[
+    {t:'#',c:'rgba(255,100,100,.6)'},{t:'',c:'transparent'},{t:'PLAYER',c:'rgba(255,100,100,.6)',l:true},
+    {t:'MP',c:'rgba(255,255,255,.3)'},{t:'W',c:'rgba(80,220,120,.6)'},{t:'D',c:'rgba(255,214,0,.55)'},
+    {t:'L',c:'rgba(255,80,80,.7)'},{t:'GF',c:'rgba(180,210,255,.55)'},{t:'COND',c:'rgba(255,255,255,.3)'},
+    {t:'PTS',c:'#FF4444'}
+  ];
+  colH.innerHTML=cDefs.map(function(c){
+    return '<div style="font-size:8px;font-weight:800;color:'+c.c+';text-align:'+(c.l?'left':'center')+';letter-spacing:1.3px;">'+c.t+'</div>';
+  }).join('');
+  inner.appendChild(colH);
+
+  /* ── ROWS ── */
+  var condGrads={
+    'cond-ap':'linear-gradient(135deg,#FFD700,#FFA000)','cond-a':'linear-gradient(135deg,#00C853,#009624)',
+    'cond-bp':'linear-gradient(135deg,#2979FF,#1565C0)','cond-bm':'linear-gradient(135deg,#4FC3F7,#0277BD)',
+    'cond-c':'linear-gradient(135deg,#78909C,#546E7A)','cond-d':'linear-gradient(135deg,#FF6D00,#E65100)',
+    'cond-e':'linear-gradient(135deg,#FF3D3D,#B71C1C)'
+  };
+
+  var bodyDiv=document.createElement('div');
+  bodyDiv.style.cssText='padding:3px 0 6px;';
+
+  slice.forEach(function(p,i){
+    var rank=startIdx+i+1;
+    var s=computeStatsFromHistory(p.id);
+    var wr=winRatio(s), cond=getCondition(wr), pts=realCalcPts(s);
+    var t=getTeamById(p.teamId);
+
+    /* Row styling */
+    var rowBg,nameStyle,rankColor,rankGlow,leftBar,ptsBg,ptsColor,ptsGlow;
+    if(rank===1){
+      rowBg='linear-gradient(90deg,rgba(220,30,30,.18) 0%,rgba(220,30,30,.05) 60%,transparent 100%)';
+      nameStyle='font-size:13px;font-weight:900;color:#FFFFFF;letter-spacing:.5px;text-shadow:0 0 12px rgba(255,255,255,.3);';
+      rankColor='#FF4444';rankGlow='0 0 12px rgba(255,68,68,.7)';
+      leftBar='#DC1E1E';ptsBg='linear-gradient(135deg,#DC1E1E,#8B0000)';ptsColor='#fff';ptsGlow='0 0 16px rgba(220,30,30,.6)';
+    } else if(rank===2){
+      rowBg='linear-gradient(90deg,rgba(180,180,180,.1) 0%,transparent 60%)';
+      nameStyle='font-size:13px;font-weight:800;color:#F5F5F5;';
+      rankColor='#D0D0D0';rankGlow='0 0 8px rgba(200,200,200,.3)';
+      leftBar='#AAAAAA';ptsBg='linear-gradient(135deg,#666,#bbb)';ptsColor='#fff';ptsGlow='none';
+    } else if(rank===3){
+      rowBg='linear-gradient(90deg,rgba(205,127,50,.1) 0%,transparent 60%)';
+      nameStyle='font-size:13px;font-weight:800;color:#F0E0C8;';
+      rankColor='#CD9B3A';rankGlow='0 0 8px rgba(205,127,50,.4)';
+      leftBar='#CD9B3A';ptsBg='linear-gradient(135deg,#7a4a10,#CD9B3A)';ptsColor='#fff';ptsGlow='none';
+    } else {
+      rowBg=i%2===0?'rgba(255,255,255,.022)':'transparent';
+      /* Alternate name highlight: red tint for even rows */
+      nameStyle=i%2===0
+        ?'font-size:12.5px;font-weight:700;color:#FFD0D0;'
+        :'font-size:12.5px;font-weight:700;color:rgba(255,255,255,.88);';
+      rankColor='rgba(255,255,255,.35)';rankGlow='none';
+      leftBar='transparent';ptsBg='transparent';ptsColor='#FF4444';ptsGlow='0 0 8px rgba(220,30,30,.4)';
+    }
+
+    /* Photo */
+    var pSrc=p.photoUrl||p.photo||'';
+    var photoHtml=pSrc&&pSrc.startsWith('http')
+      ?'<img src="'+pSrc+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(220,30,30,.4);" crossorigin="anonymous">'
+      :'<div style="width:28px;height:28px;border-radius:50%;background:rgba(220,30,30,.1);border:1.5px solid rgba(220,30,30,.3);display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,100,100,.6)"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></div>';
+
+    /* Team logo */
+    var tSrc=t?(t.logoUrl||t.logo||''):'';
+    var tLogo=tSrc&&tSrc.startsWith('http')
+      ?'<img src="'+tSrc+'" style="width:12px;height:12px;border-radius:50%;object-fit:cover;vertical-align:middle;" crossorigin="anonymous">'
+      :'<svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(220,30,30,.45)"><circle cx="12" cy="12" r="10"/></svg>';
+    var tName=t?(t.name.length>13?t.name.slice(0,12)+'.':t.name):'';
+
+    /* Condition badge */
+    var cBg=condGrads[cond.cls]||condGrads['cond-c'];
+    var condBadge=s.mp>=3
+      ?'<div style="background:'+cBg+';border-radius:5px;padding:2px 6px;display:inline-block;"><span style="font-size:9px;font-weight:900;color:#fff;letter-spacing:.5px;">'+cond.label+'</span></div>'
+      :'<div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:2px 6px;"><span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.3);">NEW</span></div>';
+
+    /* PTS cell */
+    var ptsCellHtml=ptsBg!=='transparent'
+      ?'<div style="background:'+ptsBg+';border-radius:8px;padding:4px 8px;display:inline-block;box-shadow:'+ptsGlow+';"><span style="font-size:'+(rank===1?'20':'17')+'px;font-weight:900;color:'+ptsColor+';line-height:1;">'+pts+'</span></div>'
+      :'<span style="font-size:17px;font-weight:900;color:'+ptsColor+';text-shadow:'+ptsGlow+';">'+pts+'</span>';
+
+    var row=document.createElement('div');
+    row.style.cssText='padding:7px 26px;display:grid;grid-template-columns:28px 32px 1fr 30px 30px 30px 38px 38px 48px 60px;gap:2px;align-items:center;background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,.04);position:relative;';
+    row.innerHTML=
+      (rank<=3?'<div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+leftBar+';box-shadow:0 0 8px '+leftBar+';border-radius:0 2px 2px 0;"></div>':'')
+      /* Rank # */
+      +'<div style="font-size:14px;font-weight:900;color:'+rankColor+';text-align:center;text-shadow:'+rankGlow+';">'+rank+'</div>'
+      /* Photo */
+      +'<div style="display:flex;align-items:center;justify-content:center;">'+photoHtml+'</div>'
+      /* Name + team */
+      +'<div style="padding-left:4px;">'
+        +'<div style="'+nameStyle+'word-break:break-word;line-height:1.25;">'+esc(p.name)+'</div>'
+        +'<div style="display:flex;align-items:center;gap:3px;margin-top:2px;">'+tLogo+'<span style="font-size:9px;color:rgba(255,255,255,.3);">'+esc(tName)+'</span></div>'
+      +'</div>'
+      /* MP */
+      +'<div style="font-size:11.5px;color:rgba(255,255,255,.38);text-align:center;font-weight:600;">'+s.mp+'</div>'
+      /* W */
+      +'<div style="font-size:12px;color:#50DC78;text-align:center;font-weight:800;">'+s.wins+'</div>'
+      /* D */
+      +'<div style="font-size:12px;color:#FFD600;text-align:center;font-weight:800;">'+s.draws+'</div>'
+      /* L */
+      +'<div style="font-size:12px;color:#FF4444;text-align:center;font-weight:800;">'+s.losses+'</div>'
+      /* GF */
+      +'<div style="font-size:12px;color:#B4D4FF;text-align:center;font-weight:800;">'+s.gf+'</div>'
+      /* COND */
+      +'<div style="text-align:center;">'+condBadge+'</div>'
+      /* PTS */
+      +'<div style="display:flex;align-items:center;justify-content:center;">'+ptsCellHtml+'</div>';
+
+    bodyDiv.appendChild(row);
+  });
+  inner.appendChild(bodyDiv);
+
+  /* ── FOOTER ── */
+  var foot=document.createElement('div');
+  foot.style.cssText='padding:12px 26px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(220,30,30,.15);background:rgba(0,0,0,.2);';
+  foot.innerHTML=
+    '<div style="font-size:9px;color:rgba(220,30,30,.4);letter-spacing:1.2px;font-weight:700;text-transform:uppercase;">W(10)+D(5)+L(-10)+GF-GC+MOTM(5)+CS(2) x Condition Boost</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.15);letter-spacing:2px;font-weight:700;">JPL 2026</div>';
+  inner.appendChild(foot);
+  wrap.appendChild(inner);
+  document.body.appendChild(wrap);
+
+  var imgs=wrap.querySelectorAll('img');
+  var loaded=0,total=imgs.length;
+  function doRender(){
+    html2canvas(wrap,{
+      backgroundColor:'#0d0d0d',scale:2.5,useCORS:true,allowTaint:true,logging:false,
+      onclone:function(doc,el){el.style.top='0';el.style.left='0';el.style.position='relative';}
+    }).then(function(canvas){
+      document.body.removeChild(wrap);
+      var a=document.createElement('a');
+      a.download='JPL_Rankings_'+rangeLabel.replace(/[#\-\s]/g,'')+'.jpg';
+      a.href=canvas.toDataURL('image/jpeg',0.97);
+      a.click();
+    }).catch(function(e){
+      if(document.body.contains(wrap)) document.body.removeChild(wrap);
+      alert('JPG error: '+e.message);
+    });
+  }
+  if(total===0){doRender();}
+  else{imgs.forEach(function(img){
+    if(img.complete){loaded++;if(loaded===total)doRender();}
+    else{img.onload=img.onerror=function(){loaded++;if(loaded===total)doRender();};}
+  });}
+}
+
+
+function mp_3plus(s){ return (s.mp||0)>=3; }
+
+// ════════════════════════════════════════════
+// PLAYER STAT CARD — Download JPG (Social Media)
+// ════════════════════════════════════════════
+function downloadPlayerCardJPG(pid){
+  if(typeof html2canvas==='undefined'){alert('html2canvas not loaded.');return;}
+  var p=getPlayers().find(function(pl){return pl.id===pid;});
+  if(!p){alert('Player not found');return;}
+  var s=computeStatsFromHistory(pid);
+  var t=getTeamById(p.teamId);
+  var wr=winRatio(s), cond=getCondition(wr), pts=realCalcPts(s);
+  var history=getPlayerAllMatchHistory(pid).slice(0,5);
+
+  var condGrads={
+    'cond-ap':'linear-gradient(135deg,#FFD700,#FFA000)','cond-a':'linear-gradient(135deg,#00E664,#009624)',
+    'cond-bp':'linear-gradient(135deg,#2979FF,#1565C0)','cond-bm':'linear-gradient(135deg,#4FC3F7,#0277BD)',
+    'cond-c':'linear-gradient(135deg,#78909C,#546E7A)','cond-d':'linear-gradient(135deg,#FF6D00,#E65100)',
+    'cond-e':'linear-gradient(135deg,#FF3D3D,#B71C1C)'
+  };
+  var cBg=condGrads[cond.cls]||condGrads['cond-c'];
+  var catColors={local:'#00E664',youth:'#2979FF',invited:'#FF6B35'};
+  var catC=catColors[p.cat||'local']||'#00E664';
+
+  /* Form dots */
+  var formDots=history.map(function(h){
+    var bc=h.result==='W'?'#00E664':h.result==='L'?'#FF4444':'#FFD600';
+    var sc=h.result==='W'?'rgba(0,230,100,.2)':h.result==='L'?'rgba(255,68,68,.2)':'rgba(255,214,0,.2)';
+    var label=h.result;
+    return '<div style="width:28px;height:28px;border-radius:50%;background:'+bc+';box-shadow:0 0 8px '+bc+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+      +'<span style="font-size:11px;font-weight:900;color:#000;">'+label+'</span></div>';
+  }).join('');
+
+  /* Stat blocks */
+  var stats=[
+    {label:'MATCHES',value:s.mp,color:'rgba(255,255,255,.7)'},
+    {label:'WINS',value:s.wins,color:'#00E664'},
+    {label:'DRAWS',value:s.draws,color:'#FFD600'},
+    {label:'LOSSES',value:s.losses,color:'#FF4444'},
+    {label:'GOALS',value:s.gf,color:'#7CB9FF'},
+    {label:'CONCEDED',value:s.ga,color:'#FF8A50'},
+    {label:'CLEAN SH',value:s.cs,color:'#00E664'},
+    {label:'MOTM',value:s.motm,color:'#FFD600'},
+  ];
+  var statGrid=stats.map(function(st){
+    return '<div style="background:rgba(0,0,0,.25);border:1px solid rgba(0,230,100,.1);border-radius:10px;padding:10px 8px;text-align:center;">'
+      +'<div style="font-size:20px;font-weight:900;color:'+st.color+';line-height:1;text-shadow:0 0 10px '+st.color+'44;">'+st.value+'</div>'
+      +'<div style="font-size:8px;color:rgba(255,255,255,.35);letter-spacing:1.2px;text-transform:uppercase;margin-top:4px;font-weight:700;">'+st.label+'</div>'
+      +'</div>';
+  }).join('');
+
+  var wrap=document.createElement('div');
+  wrap.style.cssText=[
+    'position:fixed','top:-9999px','left:-9999px',
+    'width:520px',
+    'background:linear-gradient(145deg,#021B13 0%,#032D1C 50%,#021810 100%)',
+    'border-radius:22px','overflow:hidden',
+    'font-family:Arial,Helvetica,sans-serif',
+    'box-shadow:0 0 0 2px rgba(0,230,100,.2),0 0 60px rgba(0,230,100,.1)'
+  ].join(';');
+
+  /* Glow effects */
+  wrap.innerHTML=
+    '<div style="position:absolute;top:-100px;left:-80px;width:350px;height:350px;background:radial-gradient(circle,rgba(0,230,100,.12) 0%,transparent 70%);pointer-events:none;z-index:1;"></div>'
+    +'<div style="position:absolute;bottom:-60px;right:-60px;width:250px;height:250px;background:radial-gradient(circle,rgba('+
+      (cond.cls==='cond-ap'?'255,215,0':cond.cls==='cond-e'?'255,60,60':'0,150,255')+
+    ',.07) 0%,transparent 70%);pointer-events:none;z-index:1;"></div>';
+
+  var inner=document.createElement('div');
+  inner.style.cssText='position:relative;z-index:2;';
+
+  /* ── Top bar: Team name strip ── */
+  var tSrc=t?(t.logoUrl||t.logo||''):'';
+  var tLogoHtml=tSrc&&tSrc.startsWith('http')
+    ?'<img src="'+tSrc+'" style="width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;" crossorigin="anonymous">'
+    :'<svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(0,230,100,.5)"><circle cx="12" cy="12" r="10"/></svg>';
+
+  var catLabel=(p.cat||'local').toUpperCase();
+
+  var topBar=document.createElement('div');
+  topBar.style.cssText='padding:10px 22px;display:flex;align-items:center;justify-content:space-between;background:rgba(0,230,100,.07);border-bottom:1px solid rgba(0,230,100,.12);';
+  topBar.innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px;">'+tLogoHtml+'<span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:.5px;">'+(t?esc(t.name):'')+'</span></div>'
+    +'<div style="display:flex;align-items:center;gap:6px;">'
+      +'<span style="background:'+catC+'22;color:'+catC+';border:1px solid '+catC+'55;border-radius:5px;padding:2px 8px;font-size:9px;font-weight:800;letter-spacing:1px;">'+catLabel+'</span>'
+      +'<span style="font-size:10px;color:rgba(255,255,255,.22);letter-spacing:1px;">'+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short'}).toUpperCase()+'</span>'
+    +'</div>';
+  inner.appendChild(topBar);
+
+  /* ── Hero section: Photo + Name + PTS ── */
+  var hero=document.createElement('div');
+  hero.style.cssText='padding:22px 22px 16px;display:flex;align-items:center;gap:18px;';
+  var pSrc=p.photoUrl||p.photo||'';
+  var heroPhoto=pSrc&&pSrc.startsWith('http')
+    ?'<img src="'+pSrc+'" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:3px solid rgba(0,230,100,.4);box-shadow:0 0 20px rgba(0,230,100,.25),0 4px 16px rgba(0,0,0,.5);" crossorigin="anonymous">'
+    :'<div style="width:84px;height:84px;border-radius:50%;background:rgba(0,230,100,.08);border:3px solid rgba(0,230,100,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="40" height="40" viewBox="0 0 24 24" fill="rgba(0,230,100,.4)"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></div>';
+
+  hero.innerHTML=heroPhoto
+    +'<div style="flex:1;">'
+      +'<div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:.5px;line-height:1.1;text-shadow:0 2px 12px rgba(0,0,0,.5);">'+esc(p.name)+'</div>'
+      +'<div style="margin-top:6px;display:flex;align-items:center;gap:8px;">'
+        +'<div style="background:'+cBg+';border-radius:8px;padding:4px 12px;display:inline-flex;align-items:center;gap:5px;box-shadow:0 2px 10px rgba(0,0,0,.4);">'
+          +'<span style="font-size:12px;font-weight:900;color:#fff;letter-spacing:.5px;">'+cond.label+'</span>'
+          +'<span style="font-size:10px;color:rgba(255,255,255,.75);">x'+cond.boost+'</span>'
+        +'</div>'
+        +'<span style="font-size:10px;color:rgba(255,255,255,.35);">'+wr+'% WR</span>'
+      +'</div>'
+    +'</div>'
+    +'<div style="text-align:center;background:rgba(0,0,0,.3);border:1px solid rgba(0,230,100,.2);border-radius:14px;padding:12px 18px;box-shadow:0 0 20px rgba(0,230,100,.1);">'
+      +'<div style="font-size:42px;font-weight:900;color:#00E664;line-height:1;text-shadow:0 0 20px rgba(0,230,100,.5);">'+pts+'</div>'
+      +'<div style="font-size:9px;color:rgba(0,230,100,.6);letter-spacing:2px;font-weight:700;margin-top:3px;">POINTS</div>'
+    +'</div>';
+  inner.appendChild(hero);
+
+  /* ── Stat grid ── */
+  var sgDiv=document.createElement('div');
+  sgDiv.style.cssText='padding:0 22px 18px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;';
+  sgDiv.innerHTML=statGrid;
+  inner.appendChild(sgDiv);
+
+  /* ── Form strip ── */
+  if(history.length){
+    var formDiv=document.createElement('div');
+    formDiv.style.cssText='padding:0 22px 16px;';
+    formDiv.innerHTML=
+      '<div style="background:rgba(0,0,0,.25);border:1px solid rgba(0,230,100,.1);border-radius:12px;padding:12px 16px;">'
+        +'<div style="font-size:9px;color:rgba(0,230,100,.5);letter-spacing:2px;font-weight:800;margin-bottom:10px;text-transform:uppercase;">Recent Form</div>'
+        +'<div style="display:flex;gap:8px;align-items:center;">'+formDots+'</div>'
+      +'</div>';
+    inner.appendChild(formDiv);
+  }
+
+  /* ── Footer ── */
+  var foot=document.createElement('div');
+  foot.style.cssText='padding:10px 22px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,230,100,.1);background:rgba(0,0,0,.15);';
+  foot.innerHTML=
+    '<div style="font-size:10px;color:rgba(0,230,100,.35);letter-spacing:2px;font-weight:700;">JUVENILE PREMIER LEAGUE</div>'
+    +'<div style="font-size:9px;color:rgba(0,230,100,.18);letter-spacing:1.5px;">JPL OFFICIAL 2026</div>';
+  inner.appendChild(foot);
+  wrap.appendChild(inner);
+  document.body.appendChild(wrap);
+
+  var imgs=wrap.querySelectorAll('img');
+  var loaded=0,total=imgs.length;
+  function doRender(){
+    html2canvas(wrap,{
+      backgroundColor:'#021B13',scale:2.5,useCORS:true,allowTaint:true,logging:false,
+      onclone:function(doc,el){el.style.top='0';el.style.left='0';el.style.position='relative';}
+    }).then(function(canvas){
+      document.body.removeChild(wrap);
+      var a=document.createElement('a');
+      a.download='JPL_Player_'+p.name.replace(/\s/g,'_')+'.jpg';
+      a.href=canvas.toDataURL('image/jpeg',0.97);
+      a.click();
+    }).catch(function(e){
+      if(document.body.contains(wrap)) document.body.removeChild(wrap);
+      alert('JPG error: '+e.message);
+    });
+  }
+  if(total===0){doRender();}
+  else{imgs.forEach(function(img){
+    if(img.complete){loaded++;if(loaded===total)doRender();}
+    else{img.onload=img.onerror=function(){loaded++;if(loaded===total)doRender();};}
+  });}
+}
+
+// ════════════════════════════════════════════
+// SIGNING CARD — Best / Flop (Value = pts÷bid×100)
+// ════════════════════════════════════════════
+function downloadSigningJPG(mode){
+  if(typeof html2canvas==='undefined'){alert('html2canvas not loaded.');return;}
+
+  // Only players WITH a bid price
+  var allPs = getPlayers().filter(function(p){ return (p.bid||0)>0; });
+  if(!allPs.length){ alert('No players with bid price set yet.'); return; }
+
+  // Compute value score = (pts / bid) * 100
+  allPs = allPs.map(function(p){
+    var s = computeStatsFromHistory(p.id);
+    var pts = realCalcPts(s);
+    var val = pts>0 ? Math.round((pts / (p.bid||1)) * 100) : (pts<0 ? -1 : 0);
+    return Object.assign({},p,{_pts:pts,_val:val,_s:s});
+  });
+
+  // Sort: best = highest value, flop = lowest value
+  allPs.sort(function(a,b){ return mode==='best' ? b._val-a._val : a._val-b._val; });
+  var slice = allPs.slice(0,10);
+
+  var isBest = mode==='best';
+  var accentColor   = isBest ? '#FFD700' : '#888888';
+  var accentGlow    = isBest ? 'rgba(255,215,0,.5)' : 'rgba(150,150,150,.3)';
+  var bgGrad        = isBest ? 'linear-gradient(145deg,#0d0a00 0%,#1a1200 50%,#0d0a00 100%)' : 'linear-gradient(145deg,#0d0d0d 0%,#111 50%,#0d0d0d 100%)';
+  var headerGrad    = isBest ? 'linear-gradient(90deg,rgba(255,215,0,.2) 0%,rgba(255,215,0,.05) 60%,transparent 100%)' : 'linear-gradient(90deg,rgba(100,100,100,.18) 0%,rgba(80,80,80,.05) 60%,transparent 100%)';
+  var iconBg        = isBest ? 'linear-gradient(135deg,#FFD700,#A67C00)' : 'linear-gradient(135deg,#555,#222)';
+  var titleColor    = isBest ? '#FFD700' : '#AAAAAA';
+  var subColor      = isBest ? '#FFC200' : '#777';
+  var borderColor   = isBest ? 'rgba(255,215,0,.3)' : 'rgba(120,120,120,.25)';
+  var glowColor     = isBest ? 'rgba(180,130,0,.2)' : 'rgba(80,80,80,.15)';
+  var cardTitle     = isBest ? 'BEST SIGNINGS' : 'FLOP SIGNINGS';
+  var cardSub       = isBest ? 'TOP 10 — VALUE / COIN' : 'BOTTOM 10 — LOWEST VALUE';
+
+  var wrap = document.createElement('div');
+  wrap.style.cssText = [
+    'position:fixed','top:-9999px','left:-9999px',
+    'width:640px',
+    'background:'+bgGrad,
+    'border-radius:20px','overflow:hidden',
+    'font-family:Arial,Helvetica,sans-serif',
+    'border:1px solid '+borderColor,
+    'box-shadow:0 0 0 1px '+borderColor+',0 0 40px '+glowColor
+  ].join(';');
+
+  // Glow overlay
+  var g1 = document.createElement('div');
+  g1.style.cssText = 'position:absolute;top:-80px;right:-60px;width:280px;height:280px;background:radial-gradient(circle,'+accentGlow+' 0%,transparent 70%);pointer-events:none;z-index:1;';
+  wrap.appendChild(g1);
+
+  var inner = document.createElement('div');
+  inner.style.cssText = 'position:relative;z-index:2;';
+
+  // Header
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'padding:22px 26px 17px;display:flex;align-items:center;justify-content:space-between;background:'+headerGrad+';border-bottom:1px solid '+borderColor+';';
+  hdr.innerHTML =
+    '<div style="display:flex;align-items:center;gap:14px;">'
+      +'<div style="width:46px;height:46px;background:'+iconBg+';border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px '+accentGlow+',0 4px 12px rgba(0,0,0,.5);">'
+        +(isBest
+          ?'<svg width="22" height="22" viewBox="0 0 24 24" fill="#000"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'
+          :'<svg width="22" height="22" viewBox="0 0 24 24" fill="#aaa"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>'
+        )
+      +'</div>'
+      +'<div>'
+        +'<div style="font-size:19px;font-weight:900;color:'+titleColor+';letter-spacing:2px;line-height:1;text-shadow:0 0 20px '+accentGlow+';">JPL '+cardTitle+'</div>'
+        +'<div style="font-size:10px;color:'+subColor+';letter-spacing:3px;text-transform:uppercase;margin-top:5px;font-weight:700;opacity:.8;">SEASON 1 &nbsp;&#9645;&nbsp; '+cardSub+'</div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:rgba(255,255,255,.2);letter-spacing:1px;font-weight:600;">'+new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase()+'</div>';
+  inner.appendChild(hdr);
+
+  // Formula note
+  var formula = document.createElement('div');
+  formula.style.cssText = 'padding:8px 26px;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.05);font-size:9px;color:rgba(255,255,255,.3);letter-spacing:1px;font-weight:600;';
+  formula.textContent = 'VALUE SCORE = (POINTS / BID COINS) x 100';
+  inner.appendChild(formula);
+
+  // Col headers
+  var colH = document.createElement('div');
+  colH.style.cssText = 'padding:8px 26px;display:grid;grid-template-columns:28px 32px 1fr 50px 44px 60px;gap:4px;align-items:center;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.05);';
+  var chs = [{t:'#',c:'rgba(255,255,255,.4)'},{t:'',c:'transparent'},{t:'PLAYER',c:'rgba(255,255,255,.4)',l:true},
+    {t:'BID',c:accentColor},{t:'PTS',c:'rgba(255,255,255,.4)'},{t:'VALUE',c:accentColor}];
+  colH.innerHTML = chs.map(function(c){
+    return '<div style="font-size:8.5px;font-weight:800;color:'+c.c+';text-align:'+(c.l?'left':'center')+';letter-spacing:1.3px;">'+c.t+'</div>';
+  }).join('');
+  inner.appendChild(colH);
+
+  // Rows
+  var bodyDiv = document.createElement('div');
+  bodyDiv.style.cssText = 'padding:3px 0 6px;';
+
+  slice.forEach(function(p,i){
+    var rank = i+1;
+    var s = p._s, pts = p._pts, val = p._val;
+    var t = getTeamById(p.teamId);
+
+    var rowBg = rank===1
+      ? 'linear-gradient(90deg,rgba(255,215,0,.1) 0%,rgba(255,215,0,.03) 60%,transparent 100%)'
+      : i%2===0?'rgba(255,255,255,.022)':'transparent';
+    var nameC = rank===1?accentColor:rank<=3?'#fff':'rgba(255,255,255,.82)';
+    var leftBar = rank===1?accentColor:rank<=3?'rgba(255,255,255,.3)':'transparent';
+
+    // Photo
+    var pSrc = p.photoUrl||p.photo||'';
+    var photoHtml = pSrc&&pSrc.startsWith('http')
+      ?'<img src="'+pSrc+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1.5px solid '+accentColor+'44;" crossorigin="anonymous">'
+      :'<div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,.4)"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></div>';
+
+    // Team
+    var tSrc=t?(t.logoUrl||t.logo||''):'';
+    var tLogo=tSrc&&tSrc.startsWith('http')
+      ?'<img src="'+tSrc+'" style="width:12px;height:12px;border-radius:50%;object-fit:cover;vertical-align:middle;" crossorigin="anonymous">'
+      :'<svg width="10" height="10" viewBox="0 0 24 24" fill="rgba(255,255,255,.3)"><circle cx="12" cy="12" r="10"/></svg>';
+    var tName=t?(t.name.length>14?t.name.slice(0,13)+'.':t.name):'';
+
+    // Value badge
+    var valColor = val>=100?'#00E664':val>=50?'#FFD700':val>=0?'#FF8A50':'#FF4444';
+    var valBg = rank===1?'background:'+iconBg+';box-shadow:0 0 10px '+accentGlow+';':'background:rgba(255,255,255,.07);';
+    var valTextC = rank===1?'#000':''+valColor;
+
+    var row = document.createElement('div');
+    row.style.cssText = 'padding:8px 26px;display:grid;grid-template-columns:28px 32px 1fr 50px 44px 60px;gap:4px;align-items:center;background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,.04);position:relative;';
+    row.innerHTML =
+      (rank<=3?'<div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:'+leftBar+';box-shadow:0 0 6px '+leftBar+';border-radius:0 2px 2px 0;"></div>':'')
+      +'<div style="font-size:14px;font-weight:900;color:'+accentColor+';text-align:center;text-shadow:0 0 10px '+accentGlow+';">'+rank+'</div>'
+      +'<div style="display:flex;align-items:center;justify-content:center;">'+photoHtml+'</div>'
+      +'<div style="padding-left:4px;">'
+        +'<div style="font-size:12.5px;font-weight:800;color:'+nameC+';line-height:1.25;word-break:break-word;">'+esc(p.name)+'</div>'
+        +'<div style="display:flex;align-items:center;gap:3px;margin-top:2px;">'+tLogo+'<span style="font-size:9px;color:rgba(255,255,255,.3);">'+esc(tName)+'</span></div>'
+      +'</div>'
+      +'<div style="text-align:center;"><div style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,.06);border-radius:6px;padding:3px 7px;"><svg width="9" height="9" viewBox="0 0 24 24" fill="'+accentColor+'"><circle cx="12" cy="12" r="9" opacity=".25"/><circle cx="12" cy="12" r="7"/></svg><span style="font-size:12px;font-weight:900;color:'+accentColor+';">'+p.bid+'</span></div></div>'
+      +'<div style="font-size:12px;color:'+(pts>0?'#00C853':pts<0?'#FF4444':'rgba(255,255,255,.5)')+';text-align:center;font-weight:800;">'+pts+'</div>'
+      +'<div style="text-align:center;"><div style="'+valBg+'border-radius:8px;padding:4px 8px;display:inline-block;"><span style="font-size:14px;font-weight:900;color:'+valTextC+';line-height:1;">'+val+'</span></div></div>';
+    bodyDiv.appendChild(row);
+  });
+  inner.appendChild(bodyDiv);
+
+  // Footer
+  var foot = document.createElement('div');
+  foot.style.cssText = 'padding:11px 26px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.2);';
+  foot.innerHTML =
+    '<div style="font-size:9px;color:rgba(255,255,255,.2);letter-spacing:1.2px;font-weight:700;">VALUE SCORE 100+ = EXCELLENT &nbsp; 50+ = GOOD &nbsp; 0-50 = BELOW AVG</div>'
+    +'<div style="font-size:9px;color:rgba(255,255,255,.15);letter-spacing:2px;font-weight:700;">JPL 2026</div>';
+  inner.appendChild(foot);
+  wrap.appendChild(inner);
+  document.body.appendChild(wrap);
+
+  var imgs=wrap.querySelectorAll('img');
+  var loaded=0,total=imgs.length;
+  function doRender(){
+    html2canvas(wrap,{
+      backgroundColor: isBest?'#0d0a00':'#0d0d0d',
+      scale:2.5,useCORS:true,allowTaint:true,logging:false,
+      onclone:function(doc,el){el.style.top='0';el.style.left='0';el.style.position='relative';}
+    }).then(function(canvas){
+      document.body.removeChild(wrap);
+      var a=document.createElement('a');
+      a.download='JPL_'+(isBest?'BestSigning':'FlopSigning')+'.jpg';
+      a.href=canvas.toDataURL('image/jpeg',0.97);
+      a.click();
+    }).catch(function(e){
+      if(document.body.contains(wrap)) document.body.removeChild(wrap);
+      alert('JPG error: '+e.message);
+    });
+  }
+  if(total===0){doRender();}
+  else{imgs.forEach(function(img){
+    if(img.complete){loaded++;if(loaded===total)doRender();}
+    else{img.onload=img.onerror=function(){loaded++;if(loaded===total)doRender();};}
+  });}
 }
 
 // ════════════════════════════════════════════
