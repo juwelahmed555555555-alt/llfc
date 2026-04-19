@@ -445,7 +445,7 @@ tr:hover td{background:#142016 !important;}
 <div class="section" id="section-points">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem;">
     <h2 class="stitle" style="margin-bottom:0;border:none;">Points Table</h2>
-    <button onclick="downloadStandingsJPG()" style="background:linear-gradient(135deg,#00C853,#009624);color:#000;border:none;border-radius:10px;padding:.5rem 1.2rem;font-family:'Barlow Condensed',sans-serif;font-size:.9rem;font-weight:800;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:.4rem;box-shadow:0 4px 15px rgba(0,200,83,.3);">
+    <button onclick="downloadStandingsJPG()" style="background:linear-gradient(135deg,#00C853,#009624);color:#000;border:none;border-radius:10px;padding:.5rem 1.2rem;font-family:Barlow Condensed,sans-serif;font-size:.9rem;font-weight:800;cursor:pointer;letter-spacing:.5px;display:flex;align-items:center;gap:.4rem;box-shadow:0 4px 15px rgba(0,200,83,.3);">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-8 2h16v2H4v-2z"/></svg>
       Download JPG
     </button>
@@ -472,16 +472,16 @@ tr:hover td{background:#142016 !important;}
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem;">
     <h2 class="stitle" style="margin-bottom:0;border:none;">Player Rankings</h2>
     <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-      <button onclick="downloadRankingJPG(1)" style="background:linear-gradient(135deg,#DC1E1E,#8B0000);color:#fff;border:none;border-radius:8px;padding:.45rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
+      <button onclick="downloadRankingJPG(1)" style="background:linear-gradient(135deg,#DC1E1E,#8B0000);color:#fff;border:none;border-radius:8px;padding:.45rem 1rem;font-family:Barlow Condensed,sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
         Download #1-10
       </button>
-      <button onclick="downloadRankingJPG(2)" style="background:linear-gradient(135deg,#444,#222);color:#fff;border:none;border-radius:8px;padding:.45rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
+      <button onclick="downloadRankingJPG(2)" style="background:linear-gradient(135deg,#444,#222);color:#fff;border:none;border-radius:8px;padding:.45rem 1rem;font-family:Barlow Condensed,sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
         Download #11-20
       </button>
-      <button onclick="downloadSigningJPG('best')" style="background:linear-gradient(135deg,#FFD700,#FFA000);color:#000;border:none;border-radius:8px;padding:.45rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
+      <button onclick="downloadSigningJPG('best')" style="background:linear-gradient(135deg,#FFD700,#FFA000);color:#000;border:none;border-radius:8px;padding:.45rem 1rem;font-family:Barlow Condensed,sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
         Best Signing Top 10
       </button>
-      <button onclick="downloadSigningJPG('flop')" style="background:linear-gradient(135deg,#555,#222);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.45rem 1rem;font-family:'Barlow Condensed',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
+      <button onclick="downloadSigningJPG('flop')" style="background:linear-gradient(135deg,#555,#222);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:.45rem 1rem;font-family:Barlow Condensed,sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;letter-spacing:.5px;">
         Flop Signing Bottom 10
       </button>
     </div>
@@ -533,6 +533,7 @@ tr:hover td{background:#142016 !important;}
     <button class="atab" onclick="showATab('fixtures',this)">Fixtures</button>
     <button class="atab" onclick="showATab('matches',this)">Matches</button>
     <button class="atab" onclick="showATab('history',this)">History</button>
+    <button class="atab" onclick="showATab('photoupload',this)">Photo Upload</button>
     <button class="atab" onclick="showATab('fxgen',this)">Fixture Gen</button>
     <button class="atab" onclick="showATab('standings',this)">Standings</button>
   </div>
@@ -1815,6 +1816,7 @@ function renderATab(tab){
   else if(tab==='fixtures') el.innerHTML=aFixturesHTML();
   else if(tab==='matches') el.innerHTML=aMatchesHTML();
   else if(tab==='history')   el.innerHTML=aHistoryHTML();
+  else if(tab==='photoupload') el.innerHTML=aPhotoUploadHTML();
   else if(tab==='fxgen')     el.innerHTML=aFxGenHTML();
   else if(tab==='standings') el.innerHTML=aStandingsHTML();
   else if(tab==='news') el.innerHTML=aNewsHTML();
@@ -2331,23 +2333,32 @@ function cleanName(s){
 }
 function fuzzyFind(name, players){
   if(!name||!players||!players.length) return null;
-  var n=name.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+  var n=String(name).toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
   if(n.length<2) return null;
-  var ex=players.find(function(p){return p.name.toLowerCase()===n;}); if(ex) return ex;
-  var co=players.find(function(p){ var pn=p.name.toLowerCase(); return pn.indexOf(n)>=0||n.indexOf(pn)>=0; }); if(co) return co;
+  var ex=players.find(function(p){return p&&p.name&&String(p.name).toLowerCase()===n;}); if(ex) return ex;
+  var co=players.find(function(p){
+    if(!p||!p.name) return false;
+    var pn=String(p.name).toLowerCase();
+    return pn.indexOf(n)>=0||n.indexOf(pn)>=0;
+  }); if(co) return co;
   var tokens=n.split(' ').filter(function(t){return t.length>=3;});
   for(var i=0;i<tokens.length;i++){
-    var tm=players.find(function(p){return p.name.toLowerCase().indexOf(tokens[i])>=0;}); if(tm) return tm;
+    var tm=players.find(function(p){
+      return p&&p.name&&String(p.name).toLowerCase().indexOf(tokens[i])>=0;
+    }); if(tm) return tm;
   }
   return null;
 }
 function fuzzyTeam(name){
   if(!name) return null;
-  var n=name.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim(); if(n.length<2) return null;
+  var n=String(name).toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+  if(n.length<2) return null;
   return getTeams().find(function(t){
-    var tn=t.name.toLowerCase().replace(/[^a-z0-9 ]/g,'');
+    if(!t||!t.name) return false;
+    var tn=String(t.name).toLowerCase().replace(/[^a-z0-9 ]/g,'');
     if(tn===n||tn.indexOf(n)>=0||n.indexOf(tn)>=0) return true;
-    var abbr=t.name.toLowerCase().split(' ').map(function(w){return w[0]||'';}).join(''); return abbr===n;
+    var abbr=String(t.name).toLowerCase().split(' ').map(function(w){return w[0]||'';}).join('');
+    return abbr===n;
   })||null;
 }
 
@@ -2372,8 +2383,8 @@ function parseMatchText(text, fx){
     if(tA) detHome=tA; if(tB) detAway=tB;
   }
 
-  var homePlayers=getPlayersByTeam(detHome.id);
-  var awayPlayers=getPlayersByTeam(detAway.id);
+  var homePlayers=detHome&&detHome.id?getPlayersByTeam(detHome.id):[];
+  var awayPlayers=detAway&&detAway.id?getPlayersByTeam(detAway.id):[];
 
   // POINTS block
   lines.forEach(function(l){
@@ -2504,7 +2515,10 @@ function parseAndPreview(){
     document.getElementById('previewContent').innerHTML=html;
     document.getElementById('previewPanel').classList.remove('hidden');
     setTimeout(function(){document.getElementById('previewPanel').scrollIntoView({behavior:'smooth',block:'start'});},50);
-  }catch(e){ console.error('Parse error:',e); alert('Parse error: '+e.message); }
+  }catch(e){
+    console.error('Parse error:',e);
+    alert('Parse error: '+e.message+'\n\nCheck: are both teams registered? Are players in Firebase?');
+  }
 }
 
 function buildScorecardTable(homeResults,awayResults,fullR){
@@ -4471,6 +4485,218 @@ function downloadSigningJPG(mode){
     if(img.complete){loaded++;if(loaded===total)doRender();}
     else{img.onload=img.onerror=function(){loaded++;if(loaded===total)doRender();};}
   });}
+}
+
+// ════════════════════════════════════════════
+// PHOTO UPLOAD TOOL — 3-step fast system
+// ════════════════════════════════════════════
+function aPhotoUploadHTML(){
+  return '<div class="apanel">'
+    +'<h3>Photo Upload Tool</h3>'
+    +'<div style="background:rgba(0,200,83,.04);border:1px solid rgba(0,200,83,.15);border-radius:10px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.76rem;color:var(--muted);">'
+    +'Step 1: Select image &nbsp;→&nbsp; Step 2: Upload &nbsp;→&nbsp; Step 3: Copy URL &nbsp;→&nbsp; Paste anywhere'
+    +'</div>'
+
+    // Drop zone
+    +'<div id="photoDropZone" onclick="photoClickUpload()" '
+    +'style="border:2px dashed rgba(0,200,83,.3);border-radius:14px;padding:2.5rem 1rem;text-align:center;cursor:pointer;transition:all .2s;background:rgba(0,200,83,.02);" '
+    +'ondragover="photoDragOver(this)" ondragleave="photoDragLeave(this)" ondrop="photoDrop(event,this)">'
+    +'<div id="photoDropContent">'
+    +'<svg width="40" height="40" viewBox="0 0 24 24" fill="rgba(0,200,83,.4)" style="margin-bottom:.6rem;display:block;margin-left:auto;margin-right:auto;"><path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-7h-3zM5 19l3-4 2 3 3-4 4 5H5z"/></svg>'
+    +'<div style="font-family:Barlow Condensed,sans-serif;font-size:1rem;font-weight:700;color:var(--muted);letter-spacing:.5px;">Click to select or drag & drop</div>'
+    +'<div style="font-size:.72rem;color:var(--muted);margin-top:.3rem;opacity:.6;">JPG, PNG, WEBP — max 5MB</div>'
+    +'</div></div>'
+
+    +'<input type="file" id="photoFileInput" accept="image/*" style="display:none;" onchange="handlePhotoFileSelect(this)">'
+
+    // Preview (hidden initially)
+    +'<div id="photoPreviewWrap" style="display:none;margin-top:1rem;">'
+    +'<div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap;">'
+    +'<img id="photoPreviewImg" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--green);box-shadow:0 0 20px rgba(0,200,83,.25);" src="">'
+    +'<div style="flex:1;min-width:200px;">'
+    +'<div style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem;" id="photoFileName"></div>'
+    +'<button id="photoUploadBtn" onclick="uploadPhotoToFirebase()" class="btn bg" style="font-size:.88rem;padding:.5rem 1.4rem;letter-spacing:.5px;">'
+    +'Upload Photo</button>'
+    +'<div id="photoUploadProgress" style="display:none;margin-top:.6rem;">'
+    +'<div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:.4rem;">'
+    +'<div id="photoProgressBar" style="background:var(--green);height:100%;width:0%;transition:width .3s;border-radius:4px;"></div></div>'
+    +'<div style="font-size:.72rem;color:var(--muted);" id="photoProgressText">Uploading...</div>'
+    +'</div></div></div></div>'
+
+    // Result URL (hidden initially)
+    +'<div id="photoUrlResult" style="display:none;margin-top:1rem;">'
+    +'<div style="font-family:Barlow Condensed,sans-serif;font-size:.82rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem;">Uploaded! Copy the URL below:</div>'
+    +'<div style="display:flex;gap:.5rem;align-items:center;">'
+    +'<input id="photoUrlOutput" readonly style="flex:1;background:var(--dark);border:1px solid var(--green);border-radius:8px;padding:.5rem .8rem;color:var(--text);font-family:monospace;font-size:.82rem;outline:none;" value="">'
+    +'<button onclick="copyPhotoUrl()" id="photoCopyBtn" style="background:var(--green);color:#000;border:none;border-radius:8px;padding:.5rem 1.1rem;font-family:Barlow Condensed,sans-serif;font-size:.88rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0;">Copy URL</button>'
+    +'</div>'
+    +'<div style="margin-top:.7rem;display:flex;align-items:center;gap:.6rem;">'
+    +'<img id="photoConfirmImg" style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--green);" src="">'
+    +'<div style="font-size:.74rem;color:var(--muted);">Paste this URL in any player Photo field</div>'
+    +'</div>'
+    +'<div style="margin-top:.9rem;">'
+    +'<button onclick="aPhotoUploadReset()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:.4rem .9rem;font-family:Barlow Condensed,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;">Upload Another</button>'
+    +'</div></div>'
+
+    +'</div>'
+    // Recent uploads list
+    +'<div class="apanel" id="recentUploadsPanel" style="display:none;">'
+    +'<h3>Recent Uploads</h3>'
+    +'<div id="recentUploadsList"></div>'
+    +'</div>';
+}
+
+// ── State ────────────────────────────────────────
+var _photoFile = null;
+var _recentUploads = JSON.parse(localStorage.getItem('jpl_photo_uploads')||'[]');
+
+function handlePhotoFileDrop(e){
+  var file = e.dataTransfer.files[0];
+  if(file) _loadPhotoPreview(file);
+}
+
+function handlePhotoFileSelect(input){
+  var file = input.files[0];
+  if(file) _loadPhotoPreview(file);
+}
+
+function _loadPhotoPreview(file){
+  if(file.size > 5*1024*1024){ alert('File too large. Max 5MB.'); return; }
+  _photoFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = document.getElementById('photoPreviewImg');
+    var wrap = document.getElementById('photoPreviewWrap');
+    var fname = document.getElementById('photoFileName');
+    var zone = document.getElementById('photoDropContent');
+    if(img) img.src = e.target.result;
+    if(wrap) wrap.style.display='block';
+    if(fname) fname.textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+    if(zone) zone.innerHTML = '<div style="font-size:.78rem;color:var(--green);font-weight:700;">Image ready — click Upload below</div>';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadPhotoToFirebase(){
+  if(!_photoFile){ alert('Select a file first!'); return; }
+  var F = fb(); if(!F){ alert('Firebase not ready'); return; }
+
+  var btn = document.getElementById('photoUploadBtn');
+  var prog = document.getElementById('photoUploadProgress');
+  var bar = document.getElementById('photoProgressBar');
+  var txt = document.getElementById('photoProgressText');
+  if(btn) btn.style.display='none';
+  if(prog) prog.style.display='block';
+  if(txt) txt.textContent = 'Uploading...';
+  if(bar) bar.style.width='20%';
+
+  try{
+    var fname = 'photos/' + Date.now() + '_' + _photoFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    var storRef = F.ref(F.storage, fname);
+    if(bar) bar.style.width='50%';
+    await F.uploadBytes(storRef, _photoFile);
+    if(bar) bar.style.width='80%';
+    var url = await F.getDownloadURL(storRef);
+    if(bar) bar.style.width='100%';
+    if(txt) txt.textContent = 'Done!';
+
+    // Show URL result
+    setTimeout(function(){
+      if(prog) prog.style.display='none';
+      var result = document.getElementById('photoUrlResult');
+      var urlInp = document.getElementById('photoUrlOutput');
+      var confirmImg = document.getElementById('photoConfirmImg');
+      if(result) result.style.display='block';
+      if(urlInp) urlInp.value = url;
+      if(confirmImg) confirmImg.src = url;
+
+      // Save to recent
+      _recentUploads.unshift({url:url, name:_photoFile.name, ts:Date.now()});
+      if(_recentUploads.length>20) _recentUploads=_recentUploads.slice(0,20);
+      try{ localStorage.setItem('jpl_photo_uploads', JSON.stringify(_recentUploads)); }catch(e){}
+      _renderRecentUploads();
+    }, 400);
+  } catch(err){
+    if(prog) prog.style.display='none';
+    if(btn) btn.style.display='block';
+    console.error('Upload error:', err);
+    alert('Upload failed: ' + err.message);
+  }
+}
+
+function copyPhotoUrl(){
+  var inp = document.getElementById('photoUrlOutput');
+  if(!inp||!inp.value) return;
+  var btn = document.getElementById('photoCopyBtn');
+  navigator.clipboard.writeText(inp.value).then(function(){
+    if(btn){ btn.textContent='Copied!'; btn.style.background='#fff'; btn.style.color='#000';
+      setTimeout(function(){ btn.textContent='Copy URL'; btn.style.background='var(--green)'; btn.style.color='#000'; }, 2000); }
+  }).catch(function(){
+    inp.select(); document.execCommand('copy');
+    if(btn){ btn.textContent='Copied!'; setTimeout(function(){ btn.textContent='Copy URL'; }, 2000); }
+  });
+}
+
+function photoDragOver(el){ el.style.borderColor='#00C853'; el.style.background='rgba(0,200,83,.06)'; }
+function photoDragLeave(el){ el.style.borderColor='rgba(0,200,83,.3)'; el.style.background='rgba(0,200,83,.02)'; }
+function photoDrop(e,el){ e.preventDefault(); photoDragLeave(el); var f=e.dataTransfer.files[0]; if(f) _loadPhotoPreview(f); }
+
+function photoClickUpload(){
+  var el=document.getElementById('photoFileInput');
+  if(el) el.click();
+}
+
+function aPhotoUploadReset(){
+  _photoFile = null;
+  // Re-render the panel
+  var el = document.getElementById('adminContent');
+  if(el) el.innerHTML = aPhotoUploadHTML();
+  _renderRecentUploads();
+}
+
+function _renderRecentUploads(){
+  var panel=document.getElementById('recentUploadsPanel');
+  var list=document.getElementById('recentUploadsList');
+  if(!panel||!list) return;
+  if(!_recentUploads.length){ panel.style.display='none'; return; }
+  panel.style.display='block';
+  var html='<div style="display:flex;flex-wrap:wrap;gap:.6rem;">';
+  _recentUploads.slice(0,12).forEach(function(u,i){
+    var dt=new Date(u.ts).toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    html+='<div style="background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:.5rem .6rem;display:flex;align-items:center;gap:.5rem;max-width:220px;">'
+      +'<img src="'+esc(u.url)+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0;">'
+      +'<div style="min-width:0;flex:1;">'
+        +'<div style="font-size:.7rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;">'+esc(u.name.length>16?u.name.slice(0,15)+'…':u.name)+'</div>'
+        +'<div style="font-size:.62rem;color:var(--muted);">'+dt+'</div>'
+      +'</div>'
+      +'<button class="recent-copy-btn" data-idx="'+i+'" style="background:rgba(0,200,83,.1);color:var(--green);border:1px solid rgba(0,200,83,.25);border-radius:5px;padding:.18rem .45rem;font-family:Barlow Condensed,sans-serif;font-size:.7rem;font-weight:700;cursor:pointer;flex-shrink:0;">Copy</button>'
+      +'</div>';
+  });
+  html+='</div>';
+  list.innerHTML=html;
+  // Attach events
+  list.querySelectorAll('.recent-copy-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var idx2=parseInt(this.dataset.idx)||0;
+      if(_recentUploads[idx2]) copySpecificUrl(_recentUploads[idx2].url);
+    });
+  });
+}
+
+
+function copySpecificUrl(url){
+  navigator.clipboard.writeText(url).then(function(){
+    // brief toast
+    var t=document.createElement('div');
+    t.textContent='URL Copied!';
+    t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:.5rem 1.2rem;border-radius:8px;font-family:Barlow Condensed,sans-serif;font-weight:800;font-size:.9rem;z-index:9999;pointer-events:none;box-shadow:0 4px 20px rgba(0,200,83,.4);';
+    document.body.appendChild(t);
+    setTimeout(function(){document.body.removeChild(t);},1800);
+  }).catch(function(){
+    var ta=document.createElement('textarea'); ta.value=url;
+    ta.style.cssText='position:fixed;opacity:0;'; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  });
 }
 
 // ════════════════════════════════════════════
