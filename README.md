@@ -241,6 +241,15 @@
       box-shadow: 0 0 15px rgba(59,130,246,0.5);
     }
 
+    .sc-team-logo-img {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      border: 3px solid #60a5fa;
+      object-fit: cover;
+      box-shadow: 0 0 15px rgba(59,130,246,0.5);
+      flex-shrink: 0;
+    }
+
     .scorecard-dark .sc-title {
       font-size: 36px;
       font-family: 'Orbitron', sans-serif;
@@ -652,7 +661,7 @@
         
         <div style="margin-bottom:1.5rem;">
           <span style="font-weight:700;color:var(--primary);display:block;margin:1rem 0;">🎮 Match Data</span>
-          <textarea id="scPasteText" placeholder="Team1 ⚒️ Team2&#10;Player1 (2)🆚(1) Player2" style="width:100%;height:180px;padding:14px;border:2px solid var(--border);border-radius:8px;"></textarea>
+          <textarea id="scPasteText" placeholder="Paste the full generated fixture here — e.g.&#10;Team1 ⚔️ Team2&#10;Player1 🔑 2🆚4 Player2&#10;...&#10;(POINTS section is used for the final score)" style="width:100%;height:180px;padding:14px;border:2px solid var(--border);border-radius:8px;"></textarea>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1rem 0;">
             <div><label style="font-weight:700;color:var(--primary);">Tournament Name</label><input type="text" id="scNameInput" placeholder="La Viola Cup 2026"></div>
@@ -668,14 +677,21 @@
             <h3>🌑 Dark Version</h3>
             <div class="scorecard-dark" id="sc-dark">
               <div class="sc-title-container">
+                <img id="sc-dark-logo" class="sc-tournament-logo" crossorigin="anonymous" style="display:none;">
                 <div class="sc-title" id="sc-dark-name">La Viola Cup</div>
               </div>
               <div class="sc-date" id="sc-dark-stage">Group Stage</div>
               <div class="sc-teams">
-                <div class="sc-team-panel" id="sc-dark-t1">Team 1</div>
+                <div class="sc-team-panel" id="sc-dark-t1">
+                  <img id="sc-dark-t1-logo" class="sc-team-logo-img" crossorigin="anonymous" style="display:none;">
+                  <span id="sc-dark-t1-name">Team 1</span>
+                </div>
                 <div class="sc-team-score" id="sc-dark-s1">0</div>
                 <div class="sc-team-score" id="sc-dark-s2">0</div>
-                <div class="sc-team-panel" id="sc-dark-t2">Team 2</div>
+                <div class="sc-team-panel" id="sc-dark-t2">
+                  <img id="sc-dark-t2-logo" class="sc-team-logo-img" crossorigin="anonymous" style="display:none;">
+                  <span id="sc-dark-t2-name">Team 2</span>
+                </div>
               </div>
               <div class="sc-matches" id="sc-dark-matches"></div>
               <div class="sc-results">
@@ -689,14 +705,21 @@
             <h3>☀️ Light Version</h3>
             <div class="scorecard-light" id="sc-light">
               <div class="sc-title-container">
+                <img id="sc-light-logo" class="sc-tournament-logo" crossorigin="anonymous" style="display:none;">
                 <div class="sc-title" id="sc-light-name">La Viola Cup</div>
               </div>
               <div class="sc-date" id="sc-light-stage">Group Stage</div>
               <div class="sc-teams">
-                <div class="sc-team-panel" id="sc-light-t1">Team 1</div>
+                <div class="sc-team-panel" id="sc-light-t1">
+                  <img id="sc-light-t1-logo" class="sc-team-logo-img" crossorigin="anonymous" style="display:none;">
+                  <span id="sc-light-t1-name">Team 1</span>
+                </div>
                 <div class="sc-team-score" id="sc-light-s1">0</div>
                 <div class="sc-team-score" id="sc-light-s2">0</div>
-                <div class="sc-team-panel" id="sc-light-t2">Team 2</div>
+                <div class="sc-team-panel" id="sc-light-t2">
+                  <img id="sc-light-t2-logo" class="sc-team-logo-img" crossorigin="anonymous" style="display:none;">
+                  <span id="sc-light-t2-name">Team 2</span>
+                </div>
               </div>
               <div class="sc-matches" id="sc-light-matches"></div>
               <div class="sc-results">
@@ -796,10 +819,22 @@
             <div style="background:var(--card);border-radius:14px;padding:1.5rem;border:2px solid var(--border);">
               <h3>🎨 Tournament Config</h3>
               <div class="form-grid">
-                <div><label>Name</label><input type="text" id="scConfigName"></div>
-                <div><label>Stage</label><input type="text" id="scConfigStage"></div>
+                <div><label>Tournament Name</label><input type="text" id="scConfigName" placeholder="e.g. La Viola Cup 2026"></div>
+                <div><label>Stage</label><input type="text" id="scConfigStage" placeholder="e.g. Group Stage"></div>
+              </div>
+              <div class="upload-area" style="margin-top:1rem;">
+                <p style="font-weight:600;">🖼️ Tournament Logo URL</p>
+                <input type="text" id="scConfigLogo" placeholder="Paste tournament logo image URL (https://...)">
+                <button class="btn-primary" onclick="previewTourneyLogo()" style="width:100%;margin-top:0.5rem;">👁️ Preview</button>
+                <img id="scConfigLogoPreview" class="preview">
               </div>
               <button class="btn-primary" style="width:100%;margin-top:1rem;padding:14px;" onclick="saveConfig()">💾 Save</button>
+            </div>
+
+            <div style="background:#fef2f2;border:2px solid #ef4444;border-radius:14px;padding:1.5rem;margin-top:1.5rem;">
+              <h3 style="color:#ef4444;">⚠️ Danger Zone</h3>
+              <p style="color:#6b7280;font-size:0.9rem;margin:0.5rem 0 1rem;">Permanently deletes ALL data in this app's storage — teams, squads, fixtures, tournaments, submissions, and configs. This cannot be undone.</p>
+              <button class="btn-danger" style="width:100%;padding:14px;" onclick="deleteAllStorage()">🗑️ Delete Storage</button>
             </div>
           </div>
 
@@ -936,7 +971,7 @@
 
   <script>
     let db, storage;
-    const ADMIN_PASSWORD = "*laviola#";
+    const ADMIN_PASSWORD = "*Fardous#";
     let currentTeamId = null;
     let teamLogoUrl = '';
     let allPlayers = [];
@@ -993,6 +1028,11 @@
       if (tab === 2) { loadTeamsForFixtures(); loadAdminFixtures(); }
       if (tab === 3) { loadTourneyList(); }
       if (tab === 4) { loadAdminPlayerChanges(); }
+      if (tab === 5) {
+        document.getElementById('scConfigName').value = scConfig.name || '';
+        document.getElementById('scConfigStage').value = scConfig.stage || '';
+        document.getElementById('scConfigLogo').value = scConfig.logo || '';
+      }
       if (tab === 6) { loadFixtureGeneratorTeams(); }
     }
 
@@ -1728,34 +1768,161 @@
     }
 
     // ========== SCORECARD FUNCTIONS ==========
-    function generateScorecard() {
-      const text = document.getElementById('scPasteText').value;
-      if (!text) return showToast('Enter match data', 'error');
-      
-      const lines = text.split('\n').filter(l => l.trim());
-      const header = lines[0].split('⚒️');
-      if (header.length < 2) return showToast('Format: Team1 ⚒️ Team2', 'error');
-      
-      const team1 = header[0].trim();
-      const team2 = header[1].trim();
+    // Strips 🔑 / @ / tabs / extra whitespace to leave a clean player name
+    function cleanScorecardName(s) {
+      return s.replace(/🔑/g, '').replace(/@/g, '').replace(/[\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    // Parses one "PlayerA 🔑 2🆚4 PlayerB 🔑" style line (tabs/spacing vary a lot in real pastes)
+    const VS_EMOJI = '🆚';
+    function parseScorecardMatchLine(rawLine) {
+      const idx = rawLine.indexOf(VS_EMOJI);
+      if (idx === -1) return null;
+
+      let left = rawLine.slice(0, idx);
+      let right = rawLine.slice(idx + VS_EMOJI.length); // 🆚 is a surrogate pair (2 code units)
+      let scoreA = null, scoreB = null;
+
+      const leftScoreMatch = left.match(/(\d+)\s*$/);
+      if (leftScoreMatch) {
+        scoreA = leftScoreMatch[1];
+        left = left.slice(0, leftScoreMatch.index);
+      }
+      const rightScoreMatch = right.match(/^\s*(\d+)/);
+      if (rightScoreMatch) {
+        scoreB = rightScoreMatch[1];
+        right = right.slice(rightScoreMatch.index + rightScoreMatch[0].length);
+      }
+
+      const vpnA = /🔑/.test(left);
+      const vpnB = /🔑/.test(right);
+      const nameA = cleanScorecardName(left);
+      const nameB = cleanScorecardName(right);
+
+      if (!nameA || !nameB) return null;
+      return { nameA, nameB, scoreA, scoreB, vpnA, vpnB };
+    }
+
+    function renderScorecardMatches(elementId, matches) {
+      let html = '';
+      matches.forEach(m => {
+        const hasScore = m.scoreA !== null && m.scoreB !== null;
+        html += `<div style="display:flex;align-items:center;gap:10px;">
+          <div class="sc-player-container" style="flex:1;">
+            <div class="sc-player-name">${m.nameA}</div>
+          </div>
+          <div class="sc-score-box" style="${hasScore ? '' : 'opacity:0.55;font-size:14px;'}">${hasScore ? `${m.scoreA} - ${m.scoreB}` : 'VS'}</div>
+          <div class="sc-player-container" style="flex:1;">
+            <div class="sc-player-name">${m.nameB}</div>
+          </div>
+        </div>`;
+      });
+      document.getElementById(elementId).innerHTML = html;
+    }
+
+    function setLogoImg(imgId, url) {
+      const img = document.getElementById(imgId);
+      if (!img) return;
+      if (url) {
+        img.onerror = () => { img.style.display = 'none'; };
+        img.src = url;
+        img.style.display = 'block';
+      } else {
+        img.style.display = 'none';
+        img.removeAttribute('src');
+      }
+    }
+
+    async function generateScorecard() {
+      const raw = document.getElementById('scPasteText').value;
+      if (!raw || !raw.trim()) return showToast('Enter match data', 'error');
+
+      const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      // Team header line: "Team1 ⚔️ Team2" (also accepts the older ⚒️ symbol). Never the
+      // line containing 🆚, since that's a player matchup, not the team separator.
+      const teamSepRegex = /[\u2694\u2692]\uFE0F?/;
+      let team1 = '', team2 = '';
+      for (const line of lines) {
+        if (line.includes('🆚')) continue;
+        if (teamSepRegex.test(line)) {
+          const parts = line.split(teamSepRegex).map(p => cleanScorecardName(p)).filter(Boolean);
+          if (parts.length >= 2) { team1 = parts[0]; team2 = parts[1]; break; }
+        }
+      }
+      if (!team1 || !team2) return showToast('Could not find a "Team1 ⚔️ Team2" line', 'error');
+
+      // Player matchup lines: anything containing 🆚
+      const matches = lines
+        .filter(l => l.includes('🆚'))
+        .map(parseScorecardMatchLine)
+        .filter(Boolean);
+
+      // Team score = sum of match wins (1 pt per win, 0 for draw), based on the
+      // scores written on either side of 🆚 in every player-vs-player line.
+      let score1 = null, score2 = null;
+      let winsA = 0, winsB = 0, scoredMatches = 0;
+      matches.forEach(m => {
+        if (m.scoreA === null || m.scoreB === null) return;
+        scoredMatches++;
+        const a = parseInt(m.scoreA, 10), b = parseInt(m.scoreB, 10);
+        if (a > b) winsA++;
+        else if (b > a) winsB++;
+        // draw: no points awarded to either side
+      });
+
+      if (scoredMatches > 0) {
+        score1 = winsA;
+        score2 = winsB;
+      } else {
+        // Fallback: no per-match scores found — try a "TeamName : number" line (POINTS section)
+        const scoreLineRegex = /^(.+?)[\t ]*[:：][\t ]*(\d+)\s*$/;
+        lines.forEach(line => {
+          const m = line.match(scoreLineRegex);
+          if (!m) return;
+          const lineName = cleanScorecardName(m[1]);
+          const val = parseInt(m[2], 10);
+          if (lineName.toLowerCase() === team1.toLowerCase()) score1 = val;
+          else if (lineName.toLowerCase() === team2.toLowerCase()) score2 = val;
+        });
+      }
+
+      // Look up registered team logos by matching team name (case-insensitive)
+      const teamsSnap = await db.ref('teams').once('value');
+      const teams = Object.values(teamsSnap.val() || {});
+      const findLogo = teamName => {
+        const match = teams.find(t => t.name && t.name.trim().toLowerCase() === teamName.trim().toLowerCase());
+        return match ? match.logo : '';
+      };
+      const logo1 = findLogo(team1);
+      const logo2 = findLogo(team2);
+      const tourneyLogo = document.getElementById('scLogoInput').value.trim() || scConfig.logo || '';
+
       const name = document.getElementById('scNameInput').value || scConfig.name;
       const stage = document.getElementById('scStageInput').value || scConfig.stage;
-      
-      document.getElementById('sc-dark-name').textContent = name;
-      document.getElementById('sc-dark-stage').textContent = stage;
-      document.getElementById('sc-dark-t1').textContent = team1;
-      document.getElementById('sc-dark-t2').textContent = team2;
-      
-      document.getElementById('sc-light-name').textContent = name;
-      document.getElementById('sc-light-stage').textContent = stage;
-      document.getElementById('sc-light-t1').textContent = team1;
-      document.getElementById('sc-light-t2').textContent = team2;
-      
-      showToast('✅ Scorecard generated!');
+      const winnerText = (score1 === null || score2 === null) ? 'Winner: -'
+        : score1 === score2 ? `Winner: Draw (${score1}-${score2})`
+        : score1 > score2 ? `Winner: ${team1} 🏆` : `Winner: ${team2} 🏆`;
+
+      ['sc-dark', 'sc-light'].forEach(prefix => {
+        document.getElementById(`${prefix}-name`).textContent = name;
+        document.getElementById(`${prefix}-stage`).textContent = stage;
+        document.getElementById(`${prefix}-t1-name`).textContent = team1;
+        document.getElementById(`${prefix}-t2-name`).textContent = team2;
+        document.getElementById(`${prefix}-s1`).textContent = score1 !== null ? score1 : '0';
+        document.getElementById(`${prefix}-s2`).textContent = score2 !== null ? score2 : '0';
+        document.getElementById(`${prefix}-winner`).textContent = winnerText;
+        setLogoImg(`${prefix}-logo`, tourneyLogo);
+        setLogoImg(`${prefix}-t1-logo`, logo1);
+        setLogoImg(`${prefix}-t2-logo`, logo2);
+        renderScorecardMatches(`${prefix}-matches`, matches);
+      });
+
+      showToast(matches.length ? `✅ Scorecard generated! (${matches.length} matches found)` : '✅ Scorecard generated!');
     }
 
     function downloadScorecard(elementId) {
-      html2canvas(document.getElementById(elementId), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+      html2canvas(document.getElementById(elementId), { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(canvas => {
         const link = document.createElement('a');
         link.download = `scorecard-${Date.now()}.png`;
         link.href = canvas.toDataURL();
@@ -1764,12 +1931,52 @@
       }).catch(() => showToast('Download failed', 'error'));
     }
 
+    function previewTourneyLogo() {
+      const url = document.getElementById('scConfigLogo').value.trim();
+      if (!url) return showToast('Enter URL first', 'error');
+      const preview = document.getElementById('scConfigLogoPreview');
+      preview.src = url;
+      preview.style.display = 'block';
+      preview.onload = () => showToast('✅ Preview loaded!');
+      preview.onerror = () => showToast('Invalid image URL', 'error');
+    }
+
+    function loadTournamentConfig() {
+      db.ref('tournamentConfig').once('value', snapshot => {
+        const cfg = snapshot.val();
+        if (cfg) scConfig = { name: cfg.name || scConfig.name, stage: cfg.stage || scConfig.stage, logo: cfg.logo || '' };
+      });
+    }
+
     function saveConfig() {
       const name = document.getElementById('scConfigName').value.trim();
       const stage = document.getElementById('scConfigStage').value.trim();
+      const logo = document.getElementById('scConfigLogo').value.trim();
       if (!name || !stage) return showToast('Fill fields', 'error');
-      scConfig = { name, stage };
-      showToast('✅ Config saved!');
+
+      const cfg = { name, stage, logo };
+      db.ref('tournamentConfig').set(cfg).then(() => {
+        scConfig = cfg;
+        showToast('✅ Config saved!');
+      }).catch(err => showToast('Save failed: ' + err.message, 'error'));
+    }
+
+    // ========== DANGER ZONE: FULL STORAGE RESET ==========
+    function deleteAllStorage() {
+      if (!confirm('This will permanently delete ALL data — teams, squads, fixtures, tournaments, submissions, everything. This cannot be undone. Continue?')) return;
+
+      const typed = prompt('Type DELETE (all caps) to confirm wiping all storage:');
+      if (typed !== 'DELETE') {
+        showToast('Cancelled — text did not match', 'error');
+        return;
+      }
+
+      db.ref('/').remove().then(() => {
+        scConfig = { name: 'La Viola Cup', stage: 'Group Stage', logo: '' };
+        showToast('✅ All storage deleted');
+        showAdminTab(1);
+        loadAdminTeams();
+      }).catch(err => showToast('Delete failed: ' + err.message, 'error'));
     }
 
     // ========== CAPTAIN FUNCTIONS ==========
@@ -2209,6 +2416,8 @@
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
+      loadTournamentConfig();
+
       // Populate player slot dropdown (1-30) — was broken because template literal
       // syntax doesn't execute inside raw HTML markup, leaving the slot select empty.
       const slotSelect = document.getElementById('playerSlot');
